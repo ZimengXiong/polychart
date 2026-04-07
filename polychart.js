@@ -967,12 +967,15 @@ var Napchart = (function (e) {
             },
             setElements: function (e) {
               var t = this.helpers;
-              ((e = e.map(function (e) {
-                return Object.assign({}, e, {
-                  start: t.limit(e.start),
-                  end: t.limit(e.end),
-                });
-              })),
+              ((e = r(
+                e.map(function (e) {
+                  return Object.assign({}, e, {
+                    start: t.limit(e.start),
+                    end: t.limit(e.end),
+                  });
+                }),
+                l,
+              )),
                 (this.data.elements = e),
                 this.draw());
             },
@@ -1650,11 +1653,13 @@ var Napchart = (function (e) {
         var r = e.shape.lanes[i.lane],
           o = r.end - r.start,
           s = n.duration(i.start, i.end),
-          c = Math.min(25, Math.max(10, s / 4)),
+          isSmall = s < 180,
+          c = isSmall ? s / 2 : Math.min(60, Math.max(25, s / 3)),
           l = e.hoverElement.positionInElement,
-          u =
+          u = !isSmall && (
             "end" === e.hoverElement.type ||
-            ("number" == typeof l && l > s / 2),
+            ("number" == typeof l && l > s / 2)
+          ),
           d = u ? n.limit(i.end - c) : n.limit(i.start + c),
           f = (r.start + r.end) / 2,
           h = n.minutesToXY(e, d, f),
@@ -2020,6 +2025,15 @@ var Napchart = (function (e) {
               e.addEventListener(t, n);
             });
           }
+          e.resetInteractionState = function () {
+            (e.activeElement = {}),
+              (e.hoverElement = {}),
+              (e.mousePenLocation = !1),
+              (e.deleteAffordance = null),
+              (e.listeningForPenMove = !1),
+              (x = !1),
+              (y = void 0);
+          };
           e.config.interaction &&
             (window.addEventListener(
               "touchstart",

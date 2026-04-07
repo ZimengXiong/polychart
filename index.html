@@ -8,14 +8,23 @@
     body {
       background-color: #f0f0f2;
       margin: 0;
-      padding: 2em;
+      padding: 0;
       font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
       color: #333;
       display: flex;
-      flex-direction: column;
+      justify-content: center;
       height: 100vh;
       box-sizing: border-box;
       overflow: hidden;
+    }
+
+    #main-wrapper {
+      width: 85%;
+      max-width: 900px;
+      margin: 4em 0;
+      display: flex;
+      flex-direction: column;
+      height: calc(100vh - 8em);
     }
 
     h1 {
@@ -27,7 +36,6 @@
     .description {
       margin: 0 0 1.5em 0;
       line-height: 1.5;
-      max-width: 600px;
       color: #333;
     }
 
@@ -132,8 +140,10 @@
     }
 
     @media (max-width: 600px) {
-      body {
-        padding: 1em;
+      #main-wrapper {
+        width: 90%;
+        margin: 2em 0;
+        height: calc(100vh - 4em);
       }
       h1 {
         font-size: 1.5em;
@@ -151,42 +161,44 @@
   </style>
 </head>
 <body>
-  <h1>Polychart</h1>
-  <p class="description">
-    Create and share your polyphasic sleep schedules. 
-    Click swatches to change colors, drag on the chart to create elements, or load a preset schedule below.
-  </p>
-
-  <div class="preset-controls">
-    <label class="preset-label" for="presetSelect">Schedule presets</label>
-    <div class="preset-toolbar">
-      <select id="presetSelect" class="preset-select">
-        <option value="">Choose a preset schedule</option>
-      </select>
-    </div>
-    <p id="presetSummary" class="preset-summary">
-      Presets follow Polyphasic Sleep Wiki default variants where those are defined. Flexible schedules use a representative example variant.
+  <div id="main-wrapper">
+    <h1>Polychart</h1>
+    <p class="description">
+      Create and share your polyphasic sleep schedules. 
+      Click swatches to change colors, drag on the chart to create elements, or load a preset schedule below.
     </p>
-  </div>
 
-  <div class="swatches">
-    <button class="swatch" data-color="#3b82f6" style="background:#3b82f6"></button>
-    <button class="swatch" data-color="#ef4444" style="background:#ef4444"></button>
-    <button class="swatch" data-color="#10b981" style="background:#10b981"></button>
-    <button class="swatch" data-color="#f59e0b" style="background:#f59e0b"></button>
-    <button class="swatch" data-color="#8b5cf6" style="background:#8b5cf6"></button>
-    <button class="swatch" data-color="#111827" style="background:#111827"></button>
-    <button class="swatch" data-color="#ec4899" style="background:#ec4899"></button>
-  </div>
+    <div class="preset-controls">
+      <label class="preset-label" for="presetSelect">Schedule presets</label>
+      <div class="preset-toolbar">
+        <select id="presetSelect" class="preset-select">
+          <option value="">Choose a preset schedule</option>
+        </select>
+      </div>
+      <p id="presetSummary" class="preset-summary">
+        Presets follow Polyphasic Sleep Wiki default variants where those are defined. Flexible schedules use a representative example variant.
+      </p>
+    </div>
 
-  <div class="actions">
-    <button id="copyShareUrl" class="share-button">Copy share URL</button>
-    <button id="clearChart" class="share-button">Clear chart</button>
-    <button id="resetChart" class="share-button">Reset</button>
-  </div>
+    <div class="swatches">
+      <button class="swatch" data-color="#3b82f6" style="background:#3b82f6"></button>
+      <button class="swatch" data-color="#ef4444" style="background:#ef4444"></button>
+      <button class="swatch" data-color="#10b981" style="background:#10b981"></button>
+      <button class="swatch" data-color="#f59e0b" style="background:#f59e0b"></button>
+      <button class="swatch" data-color="#8b5cf6" style="background:#8b5cf6"></button>
+      <button class="swatch" data-color="#111827" style="background:#111827"></button>
+      <button class="swatch" data-color="#ec4899" style="background:#ec4899"></button>
+    </div>
 
-  <div class="chart-container">
-    <canvas id="myNapchart"></canvas>
+    <div class="actions">
+      <button id="copyShareUrl" class="share-button">Copy share URL</button>
+      <button id="clearChart" class="share-button">Clear chart</button>
+      <button id="resetChart" class="share-button">Reset</button>
+    </div>
+
+    <div class="chart-container">
+      <canvas id="myNapchart"></canvas>
+    </div>
   </div>
   <script src="./polychart.js"></script>
   <script>
@@ -216,6 +228,44 @@
       "#111827",
       "#ec4899"
     ]
+    var V1_FRAGMENT_PREFIX = "1"
+    var V4_FRAGMENT_RAW_PREFIX = "4r"
+    var V4_FRAGMENT_COMPRESSED_PREFIX = "4d"
+    var V4_TEXT_MODE_EMPTY = 0
+    var V4_TEXT_MODE_INHERIT_LEGEND = 1
+    var V4_TEXT_MODE_STATIC = 2
+    var V4_TEXT_MODE_LOCAL = 3
+    var V4_TEXT_MODE_INLINE = 4
+    var V4_STATIC_TEXT_DICTIONARY = [
+      "Sleep",
+      "Work",
+      "Core",
+      "Core 1",
+      "Core 2",
+      "Core 3",
+      "Core 4",
+      "Nap",
+      "Nap 1",
+      "Nap 2",
+      "Nap 3",
+      "Nap 4",
+      "Nap 5",
+      "Nap 6",
+      "Nap 7",
+      "Nap 8",
+      "Nap 9",
+      "Siesta",
+      "Flexible nap",
+      "sleep",
+      "work",
+      "core",
+      "nap"
+    ]
+    var V4_STATIC_TEXT_LOOKUP = Object.create(null)
+
+    V4_STATIC_TEXT_DICTIONARY.forEach(function (text, index) {
+      V4_STATIC_TEXT_LOOKUP[text] = index
+    })
     var DEFAULT_DATA = {
       colorTags: [
         { color: "blue", tag: "Sleep" },
@@ -864,6 +914,736 @@
       })
     }
 
+    function createByteWriter() {
+      var bytes = []
+
+      return {
+        writeByte: function (value) {
+          bytes.push(value & 255)
+        },
+        writeVarUint: function (value) {
+          var remaining = value >>> 0
+          while (remaining >= 128) {
+            this.writeByte((remaining & 127) | 128)
+            remaining >>>= 7
+          }
+          this.writeByte(remaining)
+        },
+        writeBytes: function (buffer) {
+          for (var i = 0; i < buffer.length; i += 1) {
+            this.writeByte(buffer[i])
+          }
+        },
+        toUint8Array: function () {
+          return new Uint8Array(bytes)
+        }
+      }
+    }
+
+    function createByteReader(bytes) {
+      var index = 0
+
+      return {
+        readByte: function () {
+          if (index >= bytes.length) {
+            throw new Error("Unexpected end of chart payload")
+          }
+          return bytes[index++]
+        },
+        readVarUint: function () {
+          var shift = 0
+          var value = 0
+          while (true) {
+            var byte = this.readByte()
+            value |= (byte & 127) << shift
+            if ((byte & 128) === 0) {
+              return value >>> 0
+            }
+            shift += 7
+          }
+        },
+        readBytes: function (length) {
+          if (index + length > bytes.length) {
+            throw new Error("Unexpected end of chart payload")
+          }
+          var output = bytes.slice(index, index + length)
+          index += length
+          return output
+        }
+      }
+    }
+
+    function encodeUtf8(text) {
+      return new TextEncoder().encode(text)
+    }
+
+    function decodeUtf8(bytes) {
+      return new TextDecoder().decode(bytes)
+    }
+
+    function limitMinutes(minutes) {
+      return minutes === 1440 ? 1440 : minutes - (1440 * Math.floor(minutes / 1440))
+    }
+
+    function chartDuration(start, end) {
+      return limitMinutes(end - start)
+    }
+
+    function chartDurationUnits(start, end) {
+      return chartDuration(start, end) / 5
+    }
+
+    function compareStrings(left, right) {
+      if (left < right) {
+        return -1
+      }
+      if (left > right) {
+        return 1
+      }
+      return 0
+    }
+
+    function compareTextTokens(left, right) {
+      if (left.mode !== right.mode) {
+        return left.mode - right.mode
+      }
+      if (left.mode === V4_TEXT_MODE_INLINE) {
+        return compareStrings(left.value, right.value)
+      }
+      if (typeof left.value === "number" || typeof right.value === "number") {
+        return (left.value || 0) - (right.value || 0)
+      }
+      return compareStrings(left.key, right.key)
+    }
+
+    function isCompressionSupported() {
+      return typeof CompressionStream !== "undefined" && typeof DecompressionStream !== "undefined"
+    }
+
+    async function transformBytes(bytes, StreamType, format) {
+      var stream = new StreamType(format)
+      var writer = stream.writable.getWriter()
+      await writer.write(bytes)
+      await writer.close()
+      return new Uint8Array(await new Response(stream.readable).arrayBuffer())
+    }
+
+    async function compressBytes(bytes) {
+      if (!isCompressionSupported()) {
+        return null
+      }
+
+      try {
+        return await transformBytes(bytes, CompressionStream, "deflate-raw")
+      } catch {
+        return null
+      }
+    }
+
+    async function decompressBytes(bytes) {
+      if (!isCompressionSupported()) {
+        throw new Error("Compressed chart payloads are not supported in this browser")
+      }
+
+      return transformBytes(bytes, DecompressionStream, "deflate-raw")
+    }
+
+    function buildLegendEntries(colorTags) {
+      var latestByColor = Object.create(null)
+
+      ;(colorTags || []).forEach(function (tag) {
+        var text = typeof tag.tag === "string" ? tag.tag : ""
+        if (!text) {
+          return
+        }
+        latestByColor[normalizeColor(tag.color || "red")] = text
+      })
+
+      return Object.keys(latestByColor).sort(compareStrings).map(function (color) {
+        return {
+          color: color,
+          tag: latestByColor[color]
+        }
+      })
+    }
+
+    function buildLegendLookup(entries) {
+      var lookup = Object.create(null)
+
+      entries.forEach(function (entry) {
+        lookup[entry.color] = entry.tag
+      })
+
+      return lookup
+    }
+
+    function countCustomTexts(chartData, legendLookup) {
+      var counts = Object.create(null)
+
+      function add(text) {
+        if (!text || Object.prototype.hasOwnProperty.call(V4_STATIC_TEXT_LOOKUP, text)) {
+          return
+        }
+        counts[text] = (counts[text] || 0) + 1
+      }
+
+      chartData.colorTags.forEach(function (tag) {
+        if (tag.tag) {
+          add(tag.tag)
+        }
+      })
+
+      chartData.elements.forEach(function (element) {
+        if (!element.text) {
+          return
+        }
+        if (legendLookup[element.color] && legendLookup[element.color] === element.text) {
+          return
+        }
+        add(element.text)
+      })
+
+      return counts
+    }
+
+    function buildLocalTextTable(chartData, legendLookup) {
+      var counts = countCustomTexts(chartData, legendLookup)
+      return Object.keys(counts).filter(function (text) {
+        return counts[text] > 1
+      }).sort(compareStrings)
+    }
+
+    function createLocalTextLookup(strings) {
+      var lookup = Object.create(null)
+      strings.forEach(function (text, index) {
+        lookup[text] = index
+      })
+      return lookup
+    }
+
+    function createElementTextToken(text, color, legendLookup, localTextLookup) {
+      if (!text) {
+        return { mode: V4_TEXT_MODE_EMPTY, key: "0" }
+      }
+      if (legendLookup[color] && legendLookup[color] === text) {
+        return { mode: V4_TEXT_MODE_INHERIT_LEGEND, key: "1" }
+      }
+      if (Object.prototype.hasOwnProperty.call(V4_STATIC_TEXT_LOOKUP, text)) {
+        return {
+          mode: V4_TEXT_MODE_STATIC,
+          value: V4_STATIC_TEXT_LOOKUP[text],
+          key: "2:" + V4_STATIC_TEXT_LOOKUP[text]
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(localTextLookup, text)) {
+        return {
+          mode: V4_TEXT_MODE_LOCAL,
+          value: localTextLookup[text],
+          key: "3:" + localTextLookup[text]
+        }
+      }
+      return {
+        mode: V4_TEXT_MODE_INLINE,
+        value: text,
+        key: "4:" + text
+      }
+    }
+
+    function createTagTextToken(text, localTextLookup) {
+      if (!text) {
+        return { mode: V4_TEXT_MODE_EMPTY, key: "0" }
+      }
+      if (Object.prototype.hasOwnProperty.call(V4_STATIC_TEXT_LOOKUP, text)) {
+        return {
+          mode: V4_TEXT_MODE_STATIC,
+          value: V4_STATIC_TEXT_LOOKUP[text],
+          key: "2:" + V4_STATIC_TEXT_LOOKUP[text]
+        }
+      }
+      if (Object.prototype.hasOwnProperty.call(localTextLookup, text)) {
+        return {
+          mode: V4_TEXT_MODE_LOCAL,
+          value: localTextLookup[text],
+          key: "3:" + localTextLookup[text]
+        }
+      }
+      return {
+        mode: V4_TEXT_MODE_INLINE,
+        value: text,
+        key: "4:" + text
+      }
+    }
+
+    function encodeColorEntry(writer, color) {
+      var normalized = normalizeColor(color)
+      var paletteIndex = COLOR_PALETTE.indexOf(normalized)
+      if (paletteIndex !== -1) {
+        writer.writeByte(0)
+        writer.writeVarUint(paletteIndex)
+        return
+      }
+
+      if (!/^#[0-9a-f]{6}$/i.test(normalized)) {
+        throw new Error("Unsupported color for v4 chart encoding: " + color)
+      }
+
+      writer.writeByte(1)
+      writer.writeByte(parseInt(normalized.slice(1, 3), 16))
+      writer.writeByte(parseInt(normalized.slice(3, 5), 16))
+      writer.writeByte(parseInt(normalized.slice(5, 7), 16))
+    }
+
+    function decodeColorEntry(reader) {
+      var mode = reader.readByte()
+
+      if (mode === 0) {
+        return COLOR_PALETTE[reader.readVarUint()]
+      }
+
+      if (mode !== 1) {
+        throw new Error("Unsupported color encoding mode: " + mode)
+      }
+
+      var red = reader.readByte().toString(16).padStart(2, "0")
+      var green = reader.readByte().toString(16).padStart(2, "0")
+      var blue = reader.readByte().toString(16).padStart(2, "0")
+      return "#" + red + green + blue
+    }
+
+    function encodeTextToken(writer, token) {
+      writer.writeByte(token.mode)
+
+      if (token.mode === V4_TEXT_MODE_STATIC || token.mode === V4_TEXT_MODE_LOCAL) {
+        writer.writeVarUint(token.value)
+        return
+      }
+
+      if (token.mode === V4_TEXT_MODE_INLINE) {
+        var bytes = encodeUtf8(token.value)
+        writer.writeVarUint(bytes.length)
+        writer.writeBytes(bytes)
+      }
+    }
+
+    function decodeTextToken(reader) {
+      var mode = reader.readByte()
+
+      if (mode === V4_TEXT_MODE_EMPTY || mode === V4_TEXT_MODE_INHERIT_LEGEND) {
+        return { mode: mode }
+      }
+
+      if (mode === V4_TEXT_MODE_STATIC || mode === V4_TEXT_MODE_LOCAL) {
+        return {
+          mode: mode,
+          value: reader.readVarUint()
+        }
+      }
+
+      if (mode === V4_TEXT_MODE_INLINE) {
+        return {
+          mode: mode,
+          value: decodeUtf8(reader.readBytes(reader.readVarUint()))
+        }
+      }
+
+      throw new Error("Unsupported text encoding mode: " + mode)
+    }
+
+    function resolveTextToken(token, color, legendLookup, localTexts) {
+      if (token.mode === V4_TEXT_MODE_EMPTY) {
+        return ""
+      }
+      if (token.mode === V4_TEXT_MODE_INHERIT_LEGEND) {
+        return legendLookup[color] || ""
+      }
+      if (token.mode === V4_TEXT_MODE_STATIC) {
+        return V4_STATIC_TEXT_DICTIONARY[token.value] || ""
+      }
+      if (token.mode === V4_TEXT_MODE_LOCAL) {
+        return localTexts[token.value] || ""
+      }
+      return token.value
+    }
+
+    function buildV4CanonicalModel(data) {
+      var chartData = compactChartData(data)
+      var legendEntries = buildLegendEntries(chartData.colorTags)
+      var legendLookup = buildLegendLookup(legendEntries)
+      var localTexts = buildLocalTextTable(chartData, legendLookup)
+      var localTextLookup = createLocalTextLookup(localTexts)
+      var colorLookup = Object.create(null)
+      var activityLookup = Object.create(null)
+      var colors = []
+      var activities = []
+      var laneElements = []
+
+      function addColor(color) {
+        if (!Object.prototype.hasOwnProperty.call(colorLookup, color)) {
+          colorLookup[color] = colors.length
+          colors.push(color)
+        }
+      }
+
+      legendEntries.forEach(function (entry) {
+        addColor(entry.color)
+      })
+
+      chartData.elements.forEach(function (element) {
+        addColor(element.color)
+      })
+
+      colors.sort(compareStrings)
+      colorLookup = Object.create(null)
+      colors.forEach(function (color, index) {
+        colorLookup[color] = index
+      })
+
+      chartData.elements.forEach(function (element) {
+        var token = createElementTextToken(element.text, element.color, legendLookup, localTextLookup)
+        var key = colorLookup[element.color] + "|" + token.key
+
+        if (!Object.prototype.hasOwnProperty.call(activityLookup, key)) {
+          activityLookup[key] = {
+            color: element.color,
+            colorRef: colorLookup[element.color],
+            textToken: token,
+            key: key
+          }
+        }
+      })
+
+      activities = Object.keys(activityLookup).map(function (key) {
+        return activityLookup[key]
+      }).sort(function (left, right) {
+        if (left.colorRef !== right.colorRef) {
+          return left.colorRef - right.colorRef
+        }
+        return compareTextTokens(left.textToken, right.textToken)
+      })
+
+      activityLookup = Object.create(null)
+      activities.forEach(function (activity, index) {
+        activityLookup[activity.key] = index
+      })
+
+      for (var lane = 0; lane < chartData.lanes; lane += 1) {
+        laneElements[lane] = chartData.elements
+          .filter(function (element) {
+            return element.lane === lane
+          })
+          .map(function (element) {
+            var token = createElementTextToken(element.text, element.color, legendLookup, localTextLookup)
+            return {
+              start: element.start,
+              end: element.end,
+              lane: element.lane,
+              activityRef: activityLookup[colorLookup[element.color] + "|" + token.key]
+            }
+          })
+          .sort(function (left, right) {
+            if (left.start !== right.start) {
+              return left.start - right.start
+            }
+            var leftDuration = chartDuration(left.start, left.end)
+            var rightDuration = chartDuration(right.start, right.end)
+            if (leftDuration !== rightDuration) {
+              return leftDuration - rightDuration
+            }
+            return left.activityRef - right.activityRef
+          })
+      }
+
+      return {
+        shape: chartData.shape,
+        lanes: chartData.lanes,
+        lanesConfig: chartData.lanesConfig,
+        colors: colors,
+        localTexts: localTexts,
+        localTextLookup: localTextLookup,
+        legendEntries: legendEntries,
+        activities: activities,
+        laneElements: laneElements
+      }
+    }
+
+    function encodeChartDataV4Bytes(data) {
+      var model = buildV4CanonicalModel(data)
+      var writer = createByteWriter()
+      var hasNonDefaultShape = model.shape !== "circle"
+      var hasMultipleLanes = model.lanes !== 1
+      var lockMask = 0
+
+      for (var lane = 0; lane < model.lanes; lane += 1) {
+        if (model.lanesConfig[lane] && model.lanesConfig[lane].locked) {
+          lockMask |= (1 << lane)
+        }
+      }
+
+      var flags =
+        (hasNonDefaultShape ? 1 : 0) |
+        (hasMultipleLanes ? 2 : 0) |
+        (lockMask ? 4 : 0) |
+        (model.legendEntries.length ? 8 : 0)
+
+      writer.writeByte(flags)
+
+      if (hasNonDefaultShape) {
+        writer.writeVarUint(SHAPE_TO_CODE[model.shape] || 0)
+      }
+      if (hasMultipleLanes) {
+        writer.writeVarUint(model.lanes - 1)
+      }
+      if (lockMask) {
+        writer.writeVarUint(lockMask)
+      }
+
+      writer.writeVarUint(model.colors.length)
+      model.colors.forEach(function (color) {
+        encodeColorEntry(writer, color)
+      })
+
+      writer.writeVarUint(model.localTexts.length)
+      model.localTexts.forEach(function (text) {
+        var bytes = encodeUtf8(text)
+        writer.writeVarUint(bytes.length)
+        writer.writeBytes(bytes)
+      })
+
+      if (model.legendEntries.length) {
+        writer.writeVarUint(model.legendEntries.length)
+        model.legendEntries.forEach(function (entry) {
+          var token = createTagTextToken(entry.tag, model.localTextLookup)
+          writer.writeVarUint(model.colors.indexOf(entry.color))
+          encodeTextToken(writer, token)
+        })
+      }
+
+      writer.writeVarUint(model.activities.length)
+      model.activities.forEach(function (activity) {
+        writer.writeVarUint(activity.colorRef)
+        encodeTextToken(writer, activity.textToken)
+      })
+
+      for (var laneIndex = 0; laneIndex < model.lanes; laneIndex += 1) {
+        var laneElements = model.laneElements[laneIndex]
+        var previousStartUnits = 0
+
+        writer.writeVarUint(laneElements.length)
+
+        laneElements.forEach(function (element, elementIndex) {
+          var startUnits = element.start / 5
+          var durationUnits = chartDurationUnits(element.start, element.end)
+          writer.writeVarUint(elementIndex === 0 ? startUnits : (startUnits - previousStartUnits))
+          writer.writeVarUint(durationUnits)
+          writer.writeVarUint(element.activityRef)
+          previousStartUnits = startUnits
+        })
+      }
+
+      return writer.toUint8Array()
+    }
+
+    function decodeChartDataV4Bytes(bytes) {
+      var reader = createByteReader(bytes)
+      var flags = reader.readByte()
+      var shape = "circle"
+      var lanes = 1
+      var lockMask = 0
+      var colors = []
+      var localTexts = []
+      var colorTags = []
+      var elements = []
+
+      if (flags & 1) {
+        shape = SHAPE_MAP[reader.readVarUint()] || "circle"
+      }
+      if (flags & 2) {
+        lanes = reader.readVarUint() + 1
+      }
+      if (flags & 4) {
+        lockMask = reader.readVarUint()
+      }
+
+      var colorCount = reader.readVarUint()
+      for (var colorIndex = 0; colorIndex < colorCount; colorIndex += 1) {
+        colors.push(decodeColorEntry(reader))
+      }
+
+      var localTextCount = reader.readVarUint()
+      for (var textIndex = 0; textIndex < localTextCount; textIndex += 1) {
+        localTexts.push(decodeUtf8(reader.readBytes(reader.readVarUint())))
+      }
+
+      if (flags & 8) {
+        var tagCount = reader.readVarUint()
+        for (var tagIndex = 0; tagIndex < tagCount; tagIndex += 1) {
+          var tagColor = colors[reader.readVarUint()]
+          var tagToken = decodeTextToken(reader)
+          colorTags.push({
+            color: tagColor,
+            tag: resolveTextToken(tagToken, tagColor, Object.create(null), localTexts)
+          })
+        }
+      }
+
+      var legendLookup = buildLegendLookup(colorTags)
+      var activities = []
+      var activityCount = reader.readVarUint()
+
+      for (var activityIndex = 0; activityIndex < activityCount; activityIndex += 1) {
+        var activityColor = colors[reader.readVarUint()]
+        var activityToken = decodeTextToken(reader)
+        activities.push({
+          color: activityColor,
+          text: resolveTextToken(activityToken, activityColor, legendLookup, localTexts)
+        })
+      }
+
+      for (var laneIndex = 0; laneIndex < lanes; laneIndex += 1) {
+        var laneElementCount = reader.readVarUint()
+        var previousStartUnits = 0
+
+        for (var elementIndex = 0; elementIndex < laneElementCount; elementIndex += 1) {
+          var startUnitsDelta = reader.readVarUint()
+          var startUnits = elementIndex === 0 ? startUnitsDelta : previousStartUnits + startUnitsDelta
+          var durationUnits = reader.readVarUint()
+          var activity = activities[reader.readVarUint()]
+          var start = startUnits * 5
+          var end = limitMinutes(start + (durationUnits * 5))
+
+          elements.push({
+            start: start,
+            end: end,
+            lane: laneIndex,
+            color: activity.color,
+            text: activity.text
+          })
+
+          previousStartUnits = startUnits
+        }
+      }
+
+      var lanesConfig = {}
+      for (var configLane = 0; configLane < lanes; configLane += 1) {
+        if ((lockMask >> configLane) & 1) {
+          lanesConfig[configLane] = { locked: true }
+        }
+      }
+
+      return compactChartData({
+        shape: shape,
+        lanes: lanes,
+        lanesConfig: lanesConfig,
+        colorTags: colorTags,
+        elements: elements
+      })
+    }
+
+    function parseShareFragment(hash) {
+      if (!hash) {
+        return null
+      }
+
+      var payload = hash.charAt(0) === "#" ? hash.slice(1) : hash
+      if (payload.charAt(0) === V1_FRAGMENT_PREFIX) {
+        return {
+          version: 1,
+          compressed: false,
+          payload: payload.slice(1)
+        }
+      }
+      if (payload.slice(0, 2) === V4_FRAGMENT_RAW_PREFIX) {
+        return {
+          version: 4,
+          compressed: false,
+          payload: payload.slice(2)
+        }
+      }
+      if (payload.slice(0, 2) === V4_FRAGMENT_COMPRESSED_PREFIX) {
+        return {
+          version: 4,
+          compressed: true,
+          payload: payload.slice(2)
+        }
+      }
+      return null
+    }
+
+    function buildBaseShareUrl(data) {
+      var url = new URL(window.location.href)
+      var v1Payload = V1_FRAGMENT_PREFIX + encodeChartData(data)
+      var rawBytes = encodeChartDataV4Bytes(data)
+      var rawPayload = V4_FRAGMENT_RAW_PREFIX + base64UrlEncode(rawBytes)
+      var bestPayload = v1Payload.length <= rawPayload.length ? v1Payload : rawPayload
+
+      url.searchParams.delete(COLOR_PARAM)
+      url.hash = bestPayload
+
+      return {
+        url: url.toString(),
+        rawBytes: rawBytes,
+        bestPayload: bestPayload
+      }
+    }
+
+    async function buildShareUrl(data) {
+      var base = buildBaseShareUrl(data)
+      var url = new URL(base.url)
+      var bestPayload = base.bestPayload
+      var compressedBytes = await compressBytes(base.rawBytes)
+
+      if (compressedBytes) {
+        var compressedPayload = V4_FRAGMENT_COMPRESSED_PREFIX + base64UrlEncode(compressedBytes)
+        if (compressedPayload.length < bestPayload.length) {
+          bestPayload = compressedPayload
+        }
+      }
+
+      url.hash = bestPayload
+      return url.toString()
+    }
+
+    async function getInitialData() {
+      var fragment = parseShareFragment(window.location.hash)
+      if (fragment) {
+        try {
+          return {
+            data: fragment.version === 1
+              ? decodeChartData(fragment.payload)
+              : decodeChartDataV4Bytes(
+                fragment.compressed
+                  ? await decompressBytes(base64UrlDecode(fragment.payload))
+                  : base64UrlDecode(fragment.payload)
+              ),
+            rewriteUrl: false
+          }
+        } catch (error) {
+          console.error("Failed to decode shared chart payload", error)
+        }
+      }
+
+      var params = new URLSearchParams(window.location.search)
+      var payload = params.get(COLOR_PARAM)
+      if (!payload) {
+        return {
+          data: cloneChartData(DEFAULT_DATA),
+          rewriteUrl: false
+        }
+      }
+
+      try {
+        return {
+          data: decodeChartData(payload),
+          rewriteUrl: true
+        }
+      } catch {
+        return {
+          data: cloneChartData(DEFAULT_DATA),
+          rewriteUrl: false
+        }
+      }
+    }
+
     function encodeChartData(data) {
       var chartData = compactChartData(data)
       var colors = []
@@ -1012,26 +1792,6 @@
       })
     }
 
-    function buildShareUrl(data) {
-      var url = new URL(window.location.href)
-      url.searchParams.set(COLOR_PARAM, encodeChartData(data))
-      return url.toString()
-    }
-
-    function getInitialData() {
-      var params = new URLSearchParams(window.location.search)
-      var payload = params.get(COLOR_PARAM)
-      if (!payload) {
-        return cloneChartData(DEFAULT_DATA)
-      }
-
-      try {
-        return decodeChartData(payload)
-      } catch {
-        return cloneChartData(DEFAULT_DATA)
-      }
-    }
-
     function stableChartSnapshot(chart) {
       return compactChartData({
         shape: chart.data.shape,
@@ -1080,6 +1840,14 @@
 
     function resetChart(data) {
       var nextData = cloneChartData(data)
+      if (typeof myNapchart.resetInteractionState === "function") {
+        myNapchart.resetInteractionState()
+      }
+      myNapchart.removeActive()
+      myNapchart.removeHover()
+      myNapchart.mousePenLocation = false
+      myNapchart.deleteAffordance = null
+      myNapchart.listeningForPenMove = false
       myNapchart.data.shape = nextData.shape
       myNapchart.data.lanes = nextData.lanes
       myNapchart.data.lanesConfig = nextData.lanesConfig
@@ -1089,7 +1857,7 @@
       myNapchart.deselect()
       setDrawColor(DEFAULT_DRAW_COLOR)
       setActiveSwatch(DEFAULT_DRAW_COLOR)
-      syncShareUrl()
+      requestShareUrlSync()
     }
 
     var swatches = document.querySelectorAll(".swatch")
@@ -1100,13 +1868,9 @@
     var resetChartButton = document.getElementById("resetChart")
     var currentDrawColor = DEFAULT_DRAW_COLOR
     var ctx = document.getElementById("myNapchart").getContext('2d')
-    var myNapchart = Napchart.init(ctx, getInitialData(), {
-      interaction: true,
-      penMode: true,
-      background: "#ffffff",
-      fontColor: "#000000",
-      defaultColor: currentDrawColor
-    })
+    var myNapchart = null
+    var latestShareUrl = window.location.href
+    var shareSyncToken = 0
 
     function populatePresetSelect() {
       PRESET_CATEGORIES.forEach(function (category) {
@@ -1144,21 +1908,50 @@
       resetChart(preset.data)
     }
 
-    function syncShareUrl() {
-      var shareUrl = buildShareUrl(stableChartSnapshot(myNapchart))
-      window.history.replaceState({}, "", shareUrl)
-      return shareUrl
+    function applyShareUrl(shareUrl) {
+      latestShareUrl = shareUrl
+      window.history.replaceState({}, "", latestShareUrl)
+      return latestShareUrl
     }
 
-    instrumentSharing(myNapchart, syncShareUrl)
-    myNapchart.onUpdate = syncShareUrl
+    async function upgradeShareUrlCompression(base, token) {
+      var compressedBytes = await compressBytes(base.rawBytes)
+      if (!compressedBytes || token !== shareSyncToken) {
+        return latestShareUrl
+      }
+
+      var compressedPayload = V4_FRAGMENT_COMPRESSED_PREFIX + base64UrlEncode(compressedBytes)
+      if (compressedPayload.length < base.bestPayload.length) {
+        var compressedUrl = new URL(base.url)
+        compressedUrl.hash = compressedPayload
+        applyShareUrl(compressedUrl.toString())
+      }
+
+      return latestShareUrl
+    }
+
+    function requestShareUrlSync() {
+      if (!myNapchart) {
+        return Promise.resolve(latestShareUrl)
+      }
+
+      var token = ++shareSyncToken
+      var base = buildBaseShareUrl(stableChartSnapshot(myNapchart))
+      var shareUrl = applyShareUrl(base.url)
+
+      upgradeShareUrlCompression(base, token).catch(function (error) {
+        console.error("Failed to compress share URL", error)
+      })
+
+      return Promise.resolve(shareUrl)
+    }
 
     function setDrawColor(color) {
       currentDrawColor = color
       myNapchart.config.defaultColor = color
       myNapchart.unScaledConfig.defaultColor = color
       setActiveSwatch(color)
-      syncShareUrl()
+      requestShareUrlSync()
     }
 
     swatches.forEach(function (button) {
@@ -1170,7 +1963,7 @@
     presetSelect.addEventListener("change", handlePresetChange)
 
     copyShareUrlButton.addEventListener("click", async function () {
-      var shareUrl = syncShareUrl()
+      var shareUrl = await requestShareUrlSync()
       if (navigator.clipboard && navigator.clipboard.writeText) {
         await navigator.clipboard.writeText(shareUrl)
       } else {
@@ -1194,7 +1987,7 @@
       myNapchart.setElements([])
       myNapchart.data.colorTags = []
       myNapchart.deselect()
-      syncShareUrl()
+      requestShareUrlSync()
     })
 
     resetChartButton.addEventListener("click", function () {
@@ -1203,10 +1996,29 @@
       resetChart(DEFAULT_DATA)
     })
 
-    populatePresetSelect()
-    handlePresetChange()
-    setDrawColor(currentDrawColor)
-    syncShareUrl()
+    async function boot() {
+      var initialState = await getInitialData()
+
+      myNapchart = Napchart.init(ctx, initialState.data, {
+        interaction: true,
+        penMode: true,
+        background: "#ffffff",
+        fontColor: "#000000",
+        defaultColor: currentDrawColor
+      })
+
+      instrumentSharing(myNapchart, requestShareUrlSync)
+      myNapchart.onUpdate = requestShareUrlSync
+
+      populatePresetSelect()
+      handlePresetChange()
+      setDrawColor(currentDrawColor)
+      await requestShareUrlSync()
+    }
+
+    boot().catch(function (error) {
+      console.error("Failed to initialize Polychart", error)
+    })
   </script>
 </body>
 </html>
