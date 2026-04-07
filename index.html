@@ -31,6 +31,51 @@
       color: #333;
     }
 
+    .preset-controls {
+      margin-bottom: 1.5em;
+      max-width: 760px;
+    }
+
+    .preset-label {
+      display: block;
+      margin-bottom: 0.5em;
+      color: #38488f;
+      font-size: 0.9em;
+      font-weight: 600;
+      letter-spacing: 0.02em;
+      text-transform: uppercase;
+    }
+
+    .preset-toolbar {
+      display: flex;
+      gap: 0.75em;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .preset-select {
+      flex: 1 1 360px;
+      min-width: 0;
+      padding: 0.75em 0.9em;
+      border: 1px solid #c7ceda;
+      border-radius: 0.7em;
+      background: #ffffff;
+      color: #111827;
+      font: inherit;
+    }
+
+    .preset-action {
+      white-space: nowrap;
+    }
+
+    .preset-summary {
+      margin: 0.8em 0 0 0;
+      max-width: 720px;
+      color: #4b5563;
+      font-size: 0.95em;
+      line-height: 1.5;
+    }
+
     .swatches {
       display: flex;
       gap: 8px;
@@ -89,6 +134,15 @@
       h1 {
         font-size: 1.5em;
       }
+
+      .preset-toolbar {
+        align-items: stretch;
+      }
+
+      .preset-select {
+        flex-basis: 100%;
+      }
+
     }
   </style>
 </head>
@@ -96,8 +150,21 @@
   <h1>Polychart</h1>
   <p class="description">
     Create and share your polyphasic sleep schedules. 
-    Click swatches to change colors, and drag on the chart to create elements.
+    Click swatches to change colors, drag on the chart to create elements, or load a preset schedule below.
   </p>
+
+  <div class="preset-controls">
+    <label class="preset-label" for="presetSelect">Schedule presets</label>
+    <div class="preset-toolbar">
+      <select id="presetSelect" class="preset-select">
+        <option value="">Choose a preset schedule</option>
+      </select>
+      <button id="applyPreset" class="share-button preset-action">Apply preset</button>
+    </div>
+    <p id="presetSummary" class="preset-summary">
+      Presets follow Polyphasic Sleep Wiki default variants where those are defined. Flexible schedules use a representative example variant.
+    </p>
+  </div>
 
   <div class="swatches">
     <button class="swatch" data-color="#3b82f6" style="background:#3b82f6"></button>
@@ -118,7 +185,7 @@
   <div class="chart-container">
     <canvas id="myNapchart"></canvas>
   </div>
-  <script src="./napchart.min.js"></script>
+  <script src="./polychart.js"></script>
   <script>
     var COLOR_PARAM = "chart"
     var CODEC_VERSION = 1
@@ -167,6 +234,412 @@
       lanes: 2,
       lanesConfig: {}
     }
+    var DEFAULT_DRAW_COLOR = "#3b82f6"
+    var PRESET_CATEGORIES = [
+      { id: "biphasic", label: "Biphasic" },
+      { id: "everyman", label: "Everyman" },
+      { id: "dual-core", label: "Dual core" },
+      { id: "tri-core", label: "Tri core" },
+      { id: "nap-only", label: "Nap only" },
+      { id: "experimental", label: "Experimental" }
+    ]
+
+    function minutesFromClock(clock) {
+      var parts = clock.split(":")
+      return (Number(parts[0]) * 60) + Number(parts[1])
+    }
+
+    function formatDuration(minutes) {
+      if (minutes >= 60) {
+        var hours = Math.floor(minutes / 60)
+        var remainder = minutes % 60
+        return remainder ? hours + "h " + remainder + "m" : hours + "h"
+      }
+      return minutes + "m"
+    }
+
+    function createSleepBlock(start, end, text) {
+      return {
+        start: minutesFromClock(start),
+        end: minutesFromClock(end),
+        lane: 0,
+        color: DEFAULT_DRAW_COLOR,
+        text: text
+      }
+    }
+
+    function presetData(blocks) {
+      return {
+        shape: "circle",
+        lanes: 1,
+        lanesConfig: {},
+        colorTags: [
+          { color: DEFAULT_DRAW_COLOR, tag: "Sleep" }
+        ],
+        elements: blocks
+      }
+    }
+
+    var PRESETS = [
+      {
+        id: "siesta",
+        label: "Siesta",
+        category: "biphasic",
+        variant: "default",
+        totalSleep: 390,
+        summary: "Default siesta variant with one long night core and a shorter midday sleep.",
+        data: presetData([
+          createSleepBlock("00:30", "05:30", "Core"),
+          createSleepBlock("13:30", "15:00", "Siesta")
+        ])
+      },
+      {
+        id: "segmented",
+        label: "Segmented",
+        category: "biphasic",
+        variant: "default",
+        totalSleep: 420,
+        summary: "Default segmented variant with one dusk core and one dawn core.",
+        data: presetData([
+          createSleepBlock("21:30", "01:00", "Core 1"),
+          createSleepBlock("05:30", "09:00", "Core 2")
+        ])
+      },
+      {
+        id: "e1",
+        label: "E1",
+        category: "everyman",
+        variant: "default",
+        totalSleep: 380,
+        summary: "Default Everyman 1 variant with a long night core and one midday nap.",
+        data: presetData([
+          createSleepBlock("00:00", "06:00", "Core"),
+          createSleepBlock("13:00", "13:20", "Nap 1")
+        ])
+      },
+      {
+        id: "biphasicx",
+        label: "BiphasicX",
+        category: "biphasic",
+        variant: "example",
+        totalSleep: 450,
+        summary: "Representative BiphasicX example with a fixed night core and a longer flexible daytime sleep block.",
+        data: presetData([
+          createSleepBlock("00:30", "06:30", "Core"),
+          createSleepBlock("13:30", "15:00", "Flexible nap")
+        ])
+      },
+      {
+        id: "e2",
+        label: "E2",
+        category: "everyman",
+        variant: "default",
+        totalSleep: 310,
+        summary: "Default Everyman 2 variant with a 4.5-hour core and two naps.",
+        data: presetData([
+          createSleepBlock("00:30", "05:00", "Core"),
+          createSleepBlock("08:30", "08:50", "Nap 1"),
+          createSleepBlock("14:00", "14:20", "Nap 2")
+        ])
+      },
+      {
+        id: "e3",
+        label: "E3",
+        category: "everyman",
+        variant: "default",
+        totalSleep: 240,
+        summary: "Default Everyman 3 variant with an early night core and three naps.",
+        data: presetData([
+          createSleepBlock("21:30", "00:30", "Core"),
+          createSleepBlock("04:00", "04:20", "Nap 1"),
+          createSleepBlock("08:30", "08:50", "Nap 2"),
+          createSleepBlock("15:00", "15:20", "Nap 3")
+        ])
+      },
+      {
+        id: "e4",
+        label: "E4",
+        category: "everyman",
+        variant: "default",
+        totalSleep: 170,
+        summary: "Default Everyman 4 variant with one single-cycle core and four naps.",
+        data: presetData([
+          createSleepBlock("21:30", "23:00", "Core"),
+          createSleepBlock("02:00", "02:20", "Nap 1"),
+          createSleepBlock("06:00", "06:20", "Nap 2"),
+          createSleepBlock("10:30", "10:50", "Nap 3"),
+          createSleepBlock("16:30", "16:50", "Nap 4")
+        ])
+      },
+      {
+        id: "e5",
+        label: "E5",
+        category: "everyman",
+        variant: "default",
+        totalSleep: 190,
+        summary: "Default Everyman 5 variant with one single-cycle core and five naps.",
+        data: presetData([
+          createSleepBlock("21:30", "23:00", "Core"),
+          createSleepBlock("01:30", "01:50", "Nap 1"),
+          createSleepBlock("05:30", "05:50", "Nap 2"),
+          createSleepBlock("09:30", "09:50", "Nap 3"),
+          createSleepBlock("13:30", "13:50", "Nap 4"),
+          createSleepBlock("17:30", "17:50", "Nap 5")
+        ])
+      },
+      {
+        id: "sevamayl",
+        label: "Sevamayl",
+        category: "everyman",
+        variant: "example",
+        totalSleep: 360,
+        summary: "Representative Sevamayl example with a stable core and three flexible naps.",
+        data: presetData([
+          createSleepBlock("23:30", "04:30", "Core"),
+          createSleepBlock("09:00", "09:20", "Nap 1"),
+          createSleepBlock("14:30", "14:50", "Nap 2"),
+          createSleepBlock("19:30", "19:50", "Nap 3")
+        ])
+      },
+      {
+        id: "trimaxion",
+        label: "Trimaxion",
+        category: "everyman",
+        variant: "default",
+        totalSleep: 180,
+        summary: "Default Trimaxion variant with one evening core and three 30-minute naps in dymaxion-style spacing.",
+        data: presetData([
+          createSleepBlock("18:00", "19:30", "Core"),
+          createSleepBlock("00:00", "00:30", "Nap 1"),
+          createSleepBlock("06:00", "06:30", "Nap 2"),
+          createSleepBlock("12:00", "12:30", "Nap 3")
+        ])
+      },
+      {
+        id: "dc1",
+        label: "DC1",
+        category: "dual-core",
+        variant: "default",
+        totalSleep: 320,
+        summary: "Default dual core 1 variant with a longer dusk core, a dawn core, and one nap.",
+        data: presetData([
+          createSleepBlock("21:30", "00:50", "Core 1"),
+          createSleepBlock("05:30", "07:00", "Core 2"),
+          createSleepBlock("13:30", "13:50", "Nap 1")
+        ])
+      },
+      {
+        id: "dc2",
+        label: "DC2",
+        category: "dual-core",
+        variant: "default",
+        totalSleep: 320,
+        summary: "Default dual core 2 variant with two cores and two naps.",
+        data: presetData([
+          createSleepBlock("21:40", "00:50", "Core 1"),
+          createSleepBlock("05:30", "07:00", "Core 2"),
+          createSleepBlock("10:30", "10:50", "Nap 1"),
+          createSleepBlock("15:30", "15:50", "Nap 2")
+        ])
+      },
+      {
+        id: "dc3",
+        label: "DC3",
+        category: "dual-core",
+        variant: "default",
+        totalSleep: 240,
+        summary: "Default dual core 3 variant with two short cores and three naps.",
+        data: presetData([
+          createSleepBlock("21:30", "23:00", "Core 1"),
+          createSleepBlock("04:30", "06:00", "Core 2"),
+          createSleepBlock("09:30", "09:50", "Nap 1"),
+          createSleepBlock("13:30", "13:50", "Nap 2"),
+          createSleepBlock("17:30", "17:50", "Nap 3")
+        ])
+      },
+      {
+        id: "dc4",
+        label: "DC4",
+        category: "dual-core",
+        variant: "default",
+        totalSleep: 260,
+        summary: "Default dual core 4 variant with two short cores and four naps.",
+        data: presetData([
+          createSleepBlock("21:30", "23:00", "Core 1"),
+          createSleepBlock("04:30", "06:00", "Core 2"),
+          createSleepBlock("08:30", "08:50", "Nap 1"),
+          createSleepBlock("11:30", "11:50", "Nap 2"),
+          createSleepBlock("14:30", "14:50", "Nap 3"),
+          createSleepBlock("17:30", "17:50", "Nap 4")
+        ])
+      },
+      {
+        id: "ducamayl",
+        label: "Ducamayl",
+        category: "experimental",
+        variant: "example",
+        totalSleep: 340,
+        summary: "Representative Ducamayl example derived from a flexible DC2-style base with two cores and two naps.",
+        data: presetData([
+          createSleepBlock("22:00", "00:30", "Core 1"),
+          createSleepBlock("05:00", "07:30", "Core 2"),
+          createSleepBlock("13:30", "13:50", "Nap 1"),
+          createSleepBlock("18:30", "18:50", "Nap 2")
+        ])
+      },
+      {
+        id: "bimaxion",
+        label: "Bimaxion",
+        category: "dual-core",
+        variant: "default",
+        totalSleep: 240,
+        summary: "Default Bimaxion variant with two short cores and two 30-minute naps in dymaxion configuration.",
+        data: presetData([
+          createSleepBlock("18:00", "19:30", "Core 1"),
+          createSleepBlock("00:00", "00:30", "Nap 1"),
+          createSleepBlock("06:00", "07:30", "Core 2"),
+          createSleepBlock("12:00", "12:30", "Nap 2")
+        ])
+      },
+      {
+        id: "triphasic",
+        label: "Triphasic",
+        category: "tri-core",
+        variant: "default",
+        totalSleep: 270,
+        summary: "Default Triphasic variant with three equidistant single-cycle cores.",
+        data: presetData([
+          createSleepBlock("21:30", "23:00", "Core 1"),
+          createSleepBlock("04:30", "06:00", "Core 2"),
+          createSleepBlock("13:30", "15:00", "Core 3")
+        ])
+      },
+      {
+        id: "tc1",
+        label: "TC1",
+        category: "tri-core",
+        variant: "default",
+        totalSleep: 290,
+        summary: "Default tri core 1 variant with three night cores and one midday nap.",
+        data: presetData([
+          createSleepBlock("21:30", "23:00", "Core 1"),
+          createSleepBlock("01:30", "03:00", "Core 2"),
+          createSleepBlock("05:30", "07:00", "Core 3"),
+          createSleepBlock("13:30", "13:50", "Nap 1")
+        ])
+      },
+      {
+        id: "tc2",
+        label: "TC2",
+        category: "tri-core",
+        variant: "default",
+        totalSleep: 310,
+        summary: "Default tri core 2 variant with three cores and two naps.",
+        data: presetData([
+          createSleepBlock("20:30", "22:00", "Core 1"),
+          createSleepBlock("00:30", "02:00", "Core 2"),
+          createSleepBlock("04:30", "06:00", "Core 3"),
+          createSleepBlock("10:30", "10:50", "Nap 1"),
+          createSleepBlock("15:30", "15:50", "Nap 2")
+        ])
+      },
+      {
+        id: "uberman",
+        label: "Uberman",
+        category: "nap-only",
+        variant: "default",
+        totalSleep: 120,
+        summary: "Default Uberman variant with six equidistant 20-minute naps.",
+        data: presetData([
+          createSleepBlock("00:00", "00:20", "Nap 1"),
+          createSleepBlock("04:00", "04:20", "Nap 2"),
+          createSleepBlock("08:00", "08:20", "Nap 3"),
+          createSleepBlock("12:00", "12:20", "Nap 4"),
+          createSleepBlock("16:00", "16:20", "Nap 5"),
+          createSleepBlock("20:00", "20:20", "Nap 6")
+        ])
+      },
+      {
+        id: "dymaxion",
+        label: "Dymaxion",
+        category: "nap-only",
+        variant: "default",
+        totalSleep: 120,
+        summary: "Default Dymaxion variant with four equidistant 30-minute naps.",
+        data: presetData([
+          createSleepBlock("00:00", "00:30", "Nap 1"),
+          createSleepBlock("06:00", "06:30", "Nap 2"),
+          createSleepBlock("12:00", "12:30", "Nap 3"),
+          createSleepBlock("18:00", "18:30", "Nap 4")
+        ])
+      },
+      {
+        id: "tesla",
+        label: "Tesla",
+        category: "nap-only",
+        variant: "default",
+        totalSleep: 80,
+        summary: "Default Tesla variant with four equidistant 20-minute naps.",
+        data: presetData([
+          createSleepBlock("00:00", "00:20", "Nap 1"),
+          createSleepBlock("06:00", "06:20", "Nap 2"),
+          createSleepBlock("12:00", "12:20", "Nap 3"),
+          createSleepBlock("18:00", "18:20", "Nap 4")
+        ])
+      },
+      {
+        id: "spamayl",
+        label: "Spamayl",
+        category: "nap-only",
+        variant: "example",
+        totalSleep: 180,
+        summary: "Representative Spamayl example with frequent 20-minute naps distributed across the day.",
+        data: presetData([
+          createSleepBlock("00:00", "00:20", "Nap 1"),
+          createSleepBlock("02:40", "03:00", "Nap 2"),
+          createSleepBlock("05:20", "05:40", "Nap 3"),
+          createSleepBlock("08:00", "08:20", "Nap 4"),
+          createSleepBlock("10:40", "11:00", "Nap 5"),
+          createSleepBlock("13:20", "13:40", "Nap 6"),
+          createSleepBlock("16:00", "16:20", "Nap 7"),
+          createSleepBlock("18:40", "19:00", "Nap 8"),
+          createSleepBlock("21:20", "21:40", "Nap 9")
+        ])
+      },
+      {
+        id: "qc0",
+        label: "QC0",
+        category: "experimental",
+        variant: "default",
+        totalSleep: 360,
+        summary: "Default QC0 variant with four single-cycle cores, including a daytime core.",
+        data: presetData([
+          createSleepBlock("21:30", "23:00", "Core 1"),
+          createSleepBlock("01:30", "03:00", "Core 2"),
+          createSleepBlock("05:30", "07:00", "Core 3"),
+          createSleepBlock("13:30", "15:00", "Core 4")
+        ])
+      },
+      {
+        id: "camayl",
+        label: "Camayl",
+        category: "experimental",
+        variant: "example",
+        totalSleep: 360,
+        summary: "Representative Camayl example using four single-cycle cores spaced around the day, based on a QC0-style base.",
+        data: presetData([
+          createSleepBlock("23:00", "00:30", "Core 1"),
+          createSleepBlock("05:30", "07:00", "Core 2"),
+          createSleepBlock("12:30", "14:00", "Core 3"),
+          createSleepBlock("19:00", "20:30", "Core 4")
+        ])
+      }
+    ]
+    var PRESET_LOOKUP = Object.create(null)
+
+    PRESETS.forEach(function (preset) {
+      PRESET_LOOKUP[preset.id] = preset
+    })
 
     function createBitWriter() {
       var bytes = []
@@ -350,7 +823,7 @@
       var sanitized = {
         shape: SHAPE_TO_CODE.hasOwnProperty(data.shape) ? data.shape : "circle",
         lanes: Math.max(1, Math.min(8, data.lanes || 1)),
-        lanesConfig: data.lanesConfig || {},
+        lanesConfig: cloneLanesConfig(data.lanesConfig),
         elements: (data.elements || []).map(function (element) {
           return {
             start: Math.round((element.start || 0) / 5) * 5,
@@ -368,6 +841,24 @@
         })
       }
       return sanitized
+    }
+
+    function cloneLanesConfig(lanesConfig) {
+      var output = {}
+      Object.keys(lanesConfig || {}).forEach(function (lane) {
+        output[lane] = Object.assign({}, lanesConfig[lane])
+      })
+      return output
+    }
+
+    function cloneChartData(data) {
+      return compactChartData({
+        shape: data && data.shape,
+        lanes: data && data.lanes,
+        lanesConfig: cloneLanesConfig(data && data.lanesConfig),
+        elements: data && data.elements,
+        colorTags: data && data.colorTags
+      })
     }
 
     function encodeChartData(data) {
@@ -528,13 +1019,13 @@
       var params = new URLSearchParams(window.location.search)
       var payload = params.get(COLOR_PARAM)
       if (!payload) {
-        return DEFAULT_DATA
+        return cloneChartData(DEFAULT_DATA)
       }
 
       try {
         return decodeChartData(payload)
       } catch {
-        return DEFAULT_DATA
+        return cloneChartData(DEFAULT_DATA)
       }
     }
 
@@ -578,11 +1069,34 @@
       })
     }
 
+    function setActiveSwatch(color) {
+      swatches.forEach(function (button) {
+        button.classList.toggle("active", normalizeColor(button.dataset.color) === normalizeColor(color))
+      })
+    }
+
+    function resetChart(data) {
+      var nextData = cloneChartData(data)
+      myNapchart.data.shape = nextData.shape
+      myNapchart.data.lanes = nextData.lanes
+      myNapchart.data.lanesConfig = nextData.lanesConfig
+      myNapchart.data.colorTags = nextData.colorTags
+      myNapchart.setElements(nextData.elements)
+      myNapchart.updateDimensions()
+      myNapchart.deselect()
+      setDrawColor(DEFAULT_DRAW_COLOR)
+      setActiveSwatch(DEFAULT_DRAW_COLOR)
+      syncShareUrl()
+    }
+
     var swatches = document.querySelectorAll(".swatch")
+    var presetSelect = document.getElementById("presetSelect")
+    var applyPresetButton = document.getElementById("applyPreset")
+    var presetSummary = document.getElementById("presetSummary")
     var copyShareUrlButton = document.getElementById("copyShareUrl")
     var clearChartButton = document.getElementById("clearChart")
     var resetChartButton = document.getElementById("resetChart")
-    var currentDrawColor = "#3b82f6"
+    var currentDrawColor = DEFAULT_DRAW_COLOR
     var ctx = document.getElementById("myNapchart").getContext('2d')
     var myNapchart = Napchart.init(ctx, getInitialData(), {
       interaction: true,
@@ -591,6 +1105,46 @@
       fontColor: "#000000",
       defaultColor: currentDrawColor
     })
+
+    function populatePresetSelect() {
+      PRESET_CATEGORIES.forEach(function (category) {
+        var group = document.createElement("optgroup")
+        group.label = category.label
+
+        PRESETS
+          .filter(function (preset) {
+            return preset.category === category.id
+          })
+          .forEach(function (preset) {
+            var option = document.createElement("option")
+            option.value = preset.id
+            option.textContent = preset.label
+            group.appendChild(option)
+          })
+
+        presetSelect.appendChild(group)
+      })
+    }
+
+    function updatePresetSummary() {
+      var preset = PRESET_LOOKUP[presetSelect.value]
+      if (!preset) {
+        presetSummary.textContent = "Presets follow Polyphasic Sleep Wiki default variants where those are defined. Flexible schedules use a representative example variant."
+        return
+      }
+
+      presetSummary.textContent = (preset.variant === "default" ? "Default variant" : "Example variant") +
+        " · " + formatDuration(preset.totalSleep) +
+        " total sleep · " + preset.summary
+    }
+
+    function applyPresetSelection() {
+      var preset = PRESET_LOOKUP[presetSelect.value]
+      if (!preset) {
+        return
+      }
+      resetChart(preset.data)
+    }
 
     function syncShareUrl() {
       var shareUrl = buildShareUrl(stableChartSnapshot(myNapchart))
@@ -605,23 +1159,18 @@
       currentDrawColor = color
       myNapchart.config.defaultColor = color
       myNapchart.unScaledConfig.defaultColor = color
+      setActiveSwatch(color)
       syncShareUrl()
     }
 
     swatches.forEach(function (button) {
       button.addEventListener("click", function () {
-        swatches.forEach(function (other) {
-          other.classList.remove("active")
-        })
-        button.classList.add("active")
-
-        var color = button.dataset.color
-        if (myNapchart.selectedElement) {
-          myNapchart.changeColor(myNapchart.selectedElement, color)
-        }
-        setDrawColor(color)
+        setDrawColor(button.dataset.color)
       })
     })
+
+    presetSelect.addEventListener("change", updatePresetSummary)
+    applyPresetButton.addEventListener("click", applyPresetSelection)
 
     copyShareUrlButton.addEventListener("click", async function () {
       var shareUrl = syncShareUrl()
@@ -643,6 +1192,8 @@
     })
 
     clearChartButton.addEventListener("click", function () {
+      presetSelect.value = ""
+      updatePresetSummary()
       myNapchart.setElements([])
       myNapchart.data.colorTags = []
       myNapchart.deselect()
@@ -650,17 +1201,13 @@
     })
 
     resetChartButton.addEventListener("click", function () {
-      var resetData = compactChartData(DEFAULT_DATA)
-      myNapchart.data.shape = resetData.shape
-      myNapchart.data.lanes = resetData.lanes
-      myNapchart.data.lanesConfig = resetData.lanesConfig
-      myNapchart.data.colorTags = resetData.colorTags
-      myNapchart.setElements(resetData.elements)
-      myNapchart.deselect()
-      syncShareUrl()
+      presetSelect.value = ""
+      updatePresetSummary()
+      resetChart(DEFAULT_DATA)
     })
 
-    swatches[0].classList.add("active")
+    populatePresetSelect()
+    updatePresetSummary()
     setDrawColor(currentDrawColor)
     syncShareUrl()
   </script>
