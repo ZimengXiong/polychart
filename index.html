@@ -32,47 +32,51 @@
     }
 
     .preset-controls {
-      margin-bottom: 1.5em;
-      max-width: 760px;
+      margin-bottom: 2em;
     }
 
     .preset-label {
       display: block;
-      margin-bottom: 0.5em;
-      color: #38488f;
+      margin-bottom: 0.4em;
+      color: #666;
       font-size: 0.9em;
-      font-weight: 600;
-      letter-spacing: 0.02em;
-      text-transform: uppercase;
     }
 
     .preset-toolbar {
       display: flex;
-      gap: 0.75em;
-      align-items: center;
-      flex-wrap: wrap;
+      gap: 1em;
+      align-items: baseline;
     }
 
     .preset-select {
-      flex: 1 1 360px;
-      min-width: 0;
-      padding: 0.75em 0.9em;
-      border: 1px solid #c7ceda;
-      border-radius: 0.7em;
-      background: #ffffff;
-      color: #111827;
+      background: none;
+      border: none;
+      padding: 0;
+      color: #38488f;
       font: inherit;
+      cursor: pointer;
+      appearance: none;
+      -webkit-appearance: none;
+      padding-right: 1.2em;
+      background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10"><path fill="%2338488f" d="M0 3l5 5 5-5z"/></svg>');
+      background-repeat: no-repeat;
+      background-position: right 2px center;
+      font-size: 1.1em;
     }
 
-    .preset-action {
-      white-space: nowrap;
+    .preset-select:hover {
+      text-decoration: underline;
+    }
+
+    .preset-select:focus {
+      outline: none;
     }
 
     .preset-summary {
-      margin: 0.8em 0 0 0;
-      max-width: 720px;
-      color: #4b5563;
-      font-size: 0.95em;
+      margin: 0.6em 0 0 0;
+      max-width: 600px;
+      color: #666;
+      font-size: 0.9em;
       line-height: 1.5;
     }
 
@@ -159,7 +163,6 @@
       <select id="presetSelect" class="preset-select">
         <option value="">Choose a preset schedule</option>
       </select>
-      <button id="applyPreset" class="share-button preset-action">Apply preset</button>
     </div>
     <p id="presetSummary" class="preset-summary">
       Presets follow Polyphasic Sleep Wiki default variants where those are defined. Flexible schedules use a representative example variant.
@@ -1091,7 +1094,6 @@
 
     var swatches = document.querySelectorAll(".swatch")
     var presetSelect = document.getElementById("presetSelect")
-    var applyPresetButton = document.getElementById("applyPreset")
     var presetSummary = document.getElementById("presetSummary")
     var copyShareUrlButton = document.getElementById("copyShareUrl")
     var clearChartButton = document.getElementById("clearChart")
@@ -1126,8 +1128,10 @@
       })
     }
 
-    function updatePresetSummary() {
-      var preset = PRESET_LOOKUP[presetSelect.value]
+    function handlePresetChange() {
+      var presetId = presetSelect.value
+      var preset = PRESET_LOOKUP[presetId]
+      
       if (!preset) {
         presetSummary.textContent = "Presets follow Polyphasic Sleep Wiki default variants where those are defined. Flexible schedules use a representative example variant."
         return
@@ -1136,13 +1140,7 @@
       presetSummary.textContent = (preset.variant === "default" ? "Default variant" : "Example variant") +
         " · " + formatDuration(preset.totalSleep) +
         " total sleep · " + preset.summary
-    }
-
-    function applyPresetSelection() {
-      var preset = PRESET_LOOKUP[presetSelect.value]
-      if (!preset) {
-        return
-      }
+      
       resetChart(preset.data)
     }
 
@@ -1169,8 +1167,7 @@
       })
     })
 
-    presetSelect.addEventListener("change", updatePresetSummary)
-    applyPresetButton.addEventListener("click", applyPresetSelection)
+    presetSelect.addEventListener("change", handlePresetChange)
 
     copyShareUrlButton.addEventListener("click", async function () {
       var shareUrl = syncShareUrl()
@@ -1193,7 +1190,7 @@
 
     clearChartButton.addEventListener("click", function () {
       presetSelect.value = ""
-      updatePresetSummary()
+      handlePresetChange()
       myNapchart.setElements([])
       myNapchart.data.colorTags = []
       myNapchart.deselect()
@@ -1202,12 +1199,12 @@
 
     resetChartButton.addEventListener("click", function () {
       presetSelect.value = ""
-      updatePresetSummary()
+      handlePresetChange()
       resetChart(DEFAULT_DATA)
     })
 
     populatePresetSelect()
-    updatePresetSummary()
+    handlePresetChange()
     setDrawColor(currentDrawColor)
     syncShareUrl()
   </script>
