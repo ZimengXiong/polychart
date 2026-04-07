@@ -231,6 +231,10 @@
     var V1_FRAGMENT_PREFIX = "1"
     var V4_FRAGMENT_RAW_PREFIX = "4r"
     var V4_FRAGMENT_COMPRESSED_PREFIX = "4d"
+    var V4_TIME_GRID_5 = 0
+    var V4_TIME_GRID_15 = 1
+    var V4_TIME_GRID_30 = 2
+    var V4_TIME_GRID_TO_MINUTES = [5, 15, 30]
     var V4_TEXT_MODE_EMPTY = 0
     var V4_TEXT_MODE_INHERIT_LEGEND = 1
     var V4_TEXT_MODE_STATIC = 2
@@ -256,10 +260,57 @@
       "Nap 9",
       "Siesta",
       "Flexible nap",
+      "Awake",
+      "Awake time",
+      "Study",
+      "Exercise",
+      "Workout",
+      "Training",
+      "Meditation",
+      "Read",
+      "Reading",
+      "Write",
+      "Writing",
+      "Class",
+      "School",
+      "Commute",
+      "Transit",
+      "Travel",
+      "Breakfast",
+      "Lunch",
+      "Dinner",
+      "Eat",
+      "Meal",
+      "Shower",
+      "Routine",
+      "Relax",
+      "Rest",
+      "Break",
+      "Focus",
+      "Deep work",
+      "Meeting",
+      "Meetings",
+      "Family",
+      "Social",
+      "REM",
+      "SWS",
+      "Lucid",
+      "Gym",
+      "Run",
+      "Walk",
+      "Coffee",
+      "Recovery",
       "sleep",
       "work",
       "core",
-      "nap"
+      "nap",
+      "study",
+      "exercise",
+      "commute",
+      "eat",
+      "rem",
+      "sws",
+      "lucid"
     ]
     var V4_STATIC_TEXT_LOOKUP = Object.create(null)
 
@@ -989,8 +1040,54 @@
       return limitMinutes(end - start)
     }
 
-    function chartDurationUnits(start, end) {
-      return chartDuration(start, end) / 5
+    function chartDurationUnits(start, end, timeGridMinutes) {
+      return chartDuration(start, end) / (timeGridMinutes || 5)
+    }
+
+    function resolveV4TimeGridCode(elements) {
+      var hasElements = false
+      var supports15 = true
+      var supports30 = true
+
+      ;(elements || []).forEach(function (element) {
+        var duration = chartDuration(element.start, element.end)
+        hasElements = true
+
+        if ((element.start % 15) !== 0 || (duration % 15) !== 0) {
+          supports15 = false
+        }
+        if ((element.start % 30) !== 0 || (duration % 30) !== 0) {
+          supports30 = false
+        }
+      })
+
+      if (!hasElements) {
+        return V4_TIME_GRID_5
+      }
+      if (supports30) {
+        return V4_TIME_GRID_30
+      }
+      if (supports15) {
+        return V4_TIME_GRID_15
+      }
+      return V4_TIME_GRID_5
+    }
+
+    function decodeV4TimeGridMinutes(flags) {
+      var gridCode = (flags >> 4) & 3
+      return V4_TIME_GRID_TO_MINUTES[gridCode] || 5
+    }
+
+    function flattenLaneElements(laneElements) {
+      var elements = []
+
+      ;(laneElements || []).forEach(function (lane) {
+        ;(lane || []).forEach(function (element) {
+          elements.push(element)
+        })
+      })
+
+      return elements
     }
 
     function compareStrings(left, right) {
@@ -1372,6 +1469,8 @@
       var hasNonDefaultShape = model.shape !== "circle"
       var hasMultipleLanes = model.lanes !== 1
       var lockMask = 0
+      var timeGridCode = resolveV4TimeGridCode(flattenLaneElements(model.laneElements))
+      var timeGridMinutes = V4_TIME_GRID_TO_MINUTES[timeGridCode] || 5
 
       for (var lane = 0; lane < model.lanes; lane += 1) {
         if (model.lanesConfig[lane] && model.lanesConfig[lane].locked) {
@@ -1383,7 +1482,8 @@
         (hasNonDefaultShape ? 1 : 0) |
         (hasMultipleLanes ? 2 : 0) |
         (lockMask ? 4 : 0) |
-        (model.legendEntries.length ? 8 : 0)
+        (model.legendEntries.length ? 8 : 0) |
+        (timeGridCode << 4)
 
       writer.writeByte(flags)
 
@@ -1431,8 +1531,8 @@
         writer.writeVarUint(laneElements.length)
 
         laneElements.forEach(function (element, elementIndex) {
-          var startUnits = element.start / 5
-          var durationUnits = chartDurationUnits(element.start, element.end)
+          var startUnits = element.start / timeGridMinutes
+          var durationUnits = chartDurationUnits(element.start, element.end, timeGridMinutes)
           writer.writeVarUint(elementIndex === 0 ? startUnits : (startUnits - previousStartUnits))
           writer.writeVarUint(durationUnits)
           writer.writeVarUint(element.activityRef)
@@ -1449,6 +1549,7 @@
       var shape = "circle"
       var lanes = 1
       var lockMask = 0
+      var timeGridMinutes = decodeV4TimeGridMinutes(flags)
       var colors = []
       var localTexts = []
       var colorTags = []
@@ -1508,8 +1609,8 @@
           var startUnits = elementIndex === 0 ? startUnitsDelta : previousStartUnits + startUnitsDelta
           var durationUnits = reader.readVarUint()
           var activity = activities[reader.readVarUint()]
-          var start = startUnits * 5
-          var end = limitMinutes(start + (durationUnits * 5))
+          var start = startUnits * timeGridMinutes
+          var end = limitMinutes(start + (durationUnits * timeGridMinutes))
 
           elements.push({
             start: start,
