@@ -1,0 +1,616 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Polychart</title>
+  <style>
+    body {
+      margin: 0;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      font-family: sans-serif;
+      gap: 16px;
+    }
+    .swatches {
+      display: flex;
+      gap: 8px;
+    }
+    .swatch {
+      width: 24px;
+      height: 24px;
+      border: 1px solid rgba(0, 0, 0, 0.2);
+      cursor: pointer;
+      padding: 0;
+    }
+    .swatch.active {
+      outline: 2px solid #111;
+      outline-offset: 1px;
+    }
+    .share-button {
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    .actions {
+      display: flex;
+      gap: 8px;
+    }
+    .chart-container {
+      width: 80vw;
+      height: 60vh;
+      border: 2px solid #ccc;
+      resize: both;
+      overflow: hidden;
+    }
+  </style>
+</head>
+<body>
+  <div class="swatches">
+    <button class="swatch" data-color="#3b82f6" style="background:#3b82f6"></button>
+    <button class="swatch" data-color="#ef4444" style="background:#ef4444"></button>
+    <button class="swatch" data-color="#10b981" style="background:#10b981"></button>
+    <button class="swatch" data-color="#f59e0b" style="background:#f59e0b"></button>
+    <button class="swatch" data-color="#8b5cf6" style="background:#8b5cf6"></button>
+    <button class="swatch" data-color="#111827" style="background:#111827"></button>
+    <button class="swatch" data-color="#ec4899" style="background:#ec4899"></button>
+  </div>
+  <div class="actions">
+    <button id="copyShareUrl" class="share-button">Copy share URL</button>
+    <button id="clearChart" class="share-button">Clear</button>
+    <button id="resetChart" class="share-button">Reset</button>
+  </div>
+  <div class="chart-container">
+    <canvas id="myNapchart"></canvas>
+  </div>
+  <script src="./napchart.min.js"></script>
+  <script>
+    var COLOR_PARAM = "chart"
+    var CODEC_VERSION = 1
+    var SHAPE_MAP = ["circle", "wide", "line"]
+    var SHAPE_TO_CODE = {
+      circle: 0,
+      wide: 1,
+      line: 2
+    }
+    var COLOR_PALETTE = [
+      "red",
+      "blue",
+      "brown",
+      "green",
+      "gray",
+      "yellow",
+      "purple",
+      "pink",
+      "white",
+      "#3b82f6",
+      "#ef4444",
+      "#10b981",
+      "#f59e0b",
+      "#8b5cf6",
+      "#111827",
+      "#ec4899"
+    ]
+    var DEFAULT_DATA = {
+      colorTags: [
+        { color: "blue", tag: "Sleep" },
+        { color: "red", tag: "Work" }
+      ],
+      elements: [{
+        start: 0,
+        end: 480,
+        text: "Sleep",
+        lane: 0,
+        color: "blue"
+      }, {
+        start: 540,
+        end: 1020,
+        text: "Work",
+        lane: 0,
+        color: "red"
+      }],
+      lanes: 2,
+      lanesConfig: {}
+    }
+
+    function createBitWriter() {
+      var bytes = []
+      var currentByte = 0
+      var bitsFilled = 0
+
+      return {
+        writeBit: function (value) {
+          currentByte = (currentByte << 1) | (value ? 1 : 0)
+          bitsFilled += 1
+          if (bitsFilled === 8) {
+            bytes.push(currentByte)
+            currentByte = 0
+            bitsFilled = 0
+          }
+        },
+        writeBits: function (value, width) {
+          for (var bit = width - 1; bit >= 0; bit -= 1) {
+            this.writeBit((value >> bit) & 1)
+          }
+        },
+        writeByte: function (value) {
+          this.writeBits(value & 255, 8)
+        },
+        writeVarUint: function (value) {
+          var remaining = value >>> 0
+          while (remaining >= 128) {
+            this.writeByte((remaining & 127) | 128)
+            remaining >>>= 7
+          }
+          this.writeByte(remaining)
+        },
+        writeBytes: function (buffer) {
+          for (var i = 0; i < buffer.length; i += 1) {
+            this.writeByte(buffer[i])
+          }
+        },
+        toUint8Array: function () {
+          var output = bytes.slice()
+          if (bitsFilled > 0) {
+            output.push(currentByte << (8 - bitsFilled))
+          }
+          return new Uint8Array(output)
+        }
+      }
+    }
+
+    function createBitReader(bytes) {
+      var byteIndex = 0
+      var bitIndex = 0
+
+      function readBit() {
+        if (byteIndex >= bytes.length) {
+          throw new Error("Unexpected end of chart payload")
+        }
+        var bit = (bytes[byteIndex] >> (7 - bitIndex)) & 1
+        bitIndex += 1
+        if (bitIndex === 8) {
+          bitIndex = 0
+          byteIndex += 1
+        }
+        return bit
+      }
+
+      return {
+        readBits: function (width) {
+          var value = 0
+          for (var i = 0; i < width; i += 1) {
+            value = (value << 1) | readBit()
+          }
+          return value
+        },
+        readByte: function () {
+          return this.readBits(8)
+        },
+        readVarUint: function () {
+          var shift = 0
+          var value = 0
+          while (true) {
+            var byte = this.readByte()
+            value |= (byte & 127) << shift
+            if ((byte & 128) === 0) {
+              return value >>> 0
+            }
+            shift += 7
+          }
+        },
+        readBytes: function (length) {
+          var output = new Uint8Array(length)
+          for (var i = 0; i < length; i += 1) {
+            output[i] = this.readByte()
+          }
+          return output
+        }
+      }
+    }
+
+    function bitsRequired(size) {
+      if (size <= 1) {
+        return 0
+      }
+      return Math.ceil(Math.log(size) / Math.log(2))
+    }
+
+    function base64UrlEncode(bytes) {
+      var binary = ""
+      for (var i = 0; i < bytes.length; i += 1) {
+        binary += String.fromCharCode(bytes[i])
+      }
+      return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "")
+    }
+
+    function base64UrlDecode(input) {
+      var padded = input.replace(/-/g, "+").replace(/_/g, "/")
+      while (padded.length % 4) {
+        padded += "="
+      }
+      var binary = atob(padded)
+      var bytes = new Uint8Array(binary.length)
+      for (var i = 0; i < binary.length; i += 1) {
+        bytes[i] = binary.charCodeAt(i)
+      }
+      return bytes
+    }
+
+    function normalizeColor(input) {
+      if (typeof input !== "string") {
+        return "#000000"
+      }
+      return input.toLowerCase()
+    }
+
+    function encodeColor(writer, color) {
+      var normalized = normalizeColor(color)
+      var paletteIndex = COLOR_PALETTE.indexOf(normalized)
+      if (paletteIndex !== -1) {
+        writer.writeBit(0)
+        writer.writeBits(paletteIndex, 4)
+        return
+      }
+      var hex = normalized
+      if (/^#[0-9a-f]{6}$/i.test(hex)) {
+        writer.writeBit(1)
+        writer.writeBits(parseInt(hex.slice(1), 16), 24)
+        return
+      }
+      throw new Error("Unsupported color for URL encoding: " + color)
+    }
+
+    function decodeColor(reader) {
+      var isHex = reader.readBits(1) === 1
+      if (!isHex) {
+        return COLOR_PALETTE[reader.readBits(4)]
+      }
+      var rgb = reader.readBits(24).toString(16)
+      return "#" + rgb.padStart(6, "0")
+    }
+
+    function encodeTextTable(strings, writer) {
+      var encoder = new TextEncoder()
+      writer.writeVarUint(strings.length)
+      strings.forEach(function (value) {
+        var encoded = encoder.encode(value)
+        writer.writeVarUint(encoded.length)
+        writer.writeBytes(encoded)
+      })
+    }
+
+    function decodeTextTable(reader) {
+      var decoder = new TextDecoder()
+      var count = reader.readVarUint()
+      var output = []
+      for (var i = 0; i < count; i += 1) {
+        var length = reader.readVarUint()
+        output.push(decoder.decode(reader.readBytes(length)))
+      }
+      return output
+    }
+
+    function compactChartData(data) {
+      var sanitized = {
+        shape: SHAPE_TO_CODE.hasOwnProperty(data.shape) ? data.shape : "circle",
+        lanes: Math.max(1, Math.min(8, data.lanes || 1)),
+        lanesConfig: data.lanesConfig || {},
+        elements: (data.elements || []).map(function (element) {
+          return {
+            start: Math.round((element.start || 0) / 5) * 5,
+            end: Math.round((element.end || 0) / 5) * 5,
+            lane: Math.max(0, Math.min(7, element.lane || 0)),
+            color: normalizeColor(element.color || "red"),
+            text: element.text || ""
+          }
+        }),
+        colorTags: (data.colorTags || []).map(function (tag) {
+          return {
+            color: normalizeColor(tag.color || "red"),
+            tag: tag.tag || ""
+          }
+        })
+      }
+      return sanitized
+    }
+
+    function encodeChartData(data) {
+      var chartData = compactChartData(data)
+      var colors = []
+      var texts = []
+      var colorLookup = Object.create(null)
+      var textLookup = Object.create(null)
+
+      function addColor(color) {
+        if (!Object.prototype.hasOwnProperty.call(colorLookup, color)) {
+          colorLookup[color] = colors.length
+          colors.push(color)
+        }
+        return colorLookup[color]
+      }
+
+      function addText(text) {
+        if (!text) {
+          return 0
+        }
+        if (!Object.prototype.hasOwnProperty.call(textLookup, text)) {
+          textLookup[text] = texts.length + 1
+          texts.push(text)
+        }
+        return textLookup[text]
+      }
+
+      chartData.elements.forEach(function (element) {
+        addColor(element.color)
+        addText(element.text)
+      })
+      chartData.colorTags.forEach(function (tag) {
+        addColor(tag.color)
+        addText(tag.tag)
+      })
+
+      var writer = createBitWriter()
+      writer.writeBits(CODEC_VERSION, 3)
+      writer.writeBits(SHAPE_TO_CODE[chartData.shape], 2)
+      writer.writeBits(chartData.lanes - 1, 3)
+      writer.writeBits(chartData.elements.length, 9)
+      writer.writeVarUint(colors.length)
+      encodeTextTable(texts, writer)
+
+      var lockedMask = 0
+      for (var lane = 0; lane < chartData.lanes; lane += 1) {
+        if (chartData.lanesConfig[lane] && chartData.lanesConfig[lane].locked) {
+          lockedMask |= (1 << lane)
+        }
+      }
+      writer.writeBits(lockedMask, chartData.lanes)
+
+      colors.forEach(function (color) {
+        encodeColor(writer, color)
+      })
+
+      var colorBitWidth = bitsRequired(colors.length)
+      var textBitWidth = bitsRequired(texts.length + 1)
+
+      chartData.elements.forEach(function (element) {
+        writer.writeBits(element.start / 5, 9)
+        writer.writeBits(element.end / 5, 9)
+        writer.writeBits(element.lane, 3)
+        if (colorBitWidth > 0) {
+          writer.writeBits(colorLookup[element.color], colorBitWidth)
+        }
+        if (textBitWidth > 0) {
+          writer.writeBits(addText(element.text), textBitWidth)
+        }
+      })
+
+      writer.writeVarUint(chartData.colorTags.length)
+      chartData.colorTags.forEach(function (tag) {
+        if (colorBitWidth > 0) {
+          writer.writeBits(colorLookup[tag.color], colorBitWidth)
+        }
+        if (textBitWidth > 0) {
+          writer.writeBits(addText(tag.tag), textBitWidth)
+        }
+      })
+
+      return base64UrlEncode(writer.toUint8Array())
+    }
+
+    function decodeChartData(payload) {
+      var reader = createBitReader(base64UrlDecode(payload))
+      var version = reader.readBits(3)
+      if (version !== CODEC_VERSION) {
+        throw new Error("Unsupported chart payload version: " + version)
+      }
+
+      var shape = SHAPE_MAP[reader.readBits(2)] || "circle"
+      var lanes = reader.readBits(3) + 1
+      var elementCount = reader.readBits(9)
+      var colorCount = reader.readVarUint()
+      var texts = decodeTextTable(reader)
+      var lockedMask = reader.readBits(lanes)
+      var colors = []
+
+      for (var i = 0; i < colorCount; i += 1) {
+        colors.push(decodeColor(reader))
+      }
+
+      var colorBitWidth = bitsRequired(colorCount)
+      var textBitWidth = bitsRequired(texts.length + 1)
+      var elements = []
+
+      for (var elementIndex = 0; elementIndex < elementCount; elementIndex += 1) {
+        var start = reader.readBits(9) * 5
+        var end = reader.readBits(9) * 5
+        var lane = reader.readBits(3)
+        var colorIndex = colorBitWidth > 0 ? reader.readBits(colorBitWidth) : 0
+        var textIndex = textBitWidth > 0 ? reader.readBits(textBitWidth) : 0
+        elements.push({
+          start: start,
+          end: end,
+          lane: lane,
+          color: colors[colorIndex],
+          text: textIndex > 0 ? texts[textIndex - 1] : ""
+        })
+      }
+
+      var tagCount = reader.readVarUint()
+      var colorTags = []
+      for (var tagIndex = 0; tagIndex < tagCount; tagIndex += 1) {
+        var tagColorIndex = colorBitWidth > 0 ? reader.readBits(colorBitWidth) : 0
+        var tagTextIndex = textBitWidth > 0 ? reader.readBits(textBitWidth) : 0
+        colorTags.push({
+          color: colors[tagColorIndex],
+          tag: tagTextIndex > 0 ? texts[tagTextIndex - 1] : ""
+        })
+      }
+
+      var lanesConfig = {}
+      for (var laneIndex = 0; laneIndex < lanes; laneIndex += 1) {
+        if ((lockedMask >> laneIndex) & 1) {
+          lanesConfig[laneIndex] = { locked: true }
+        }
+      }
+
+      return compactChartData({
+        shape: shape,
+        lanes: lanes,
+        lanesConfig: lanesConfig,
+        elements: elements,
+        colorTags: colorTags
+      })
+    }
+
+    function buildShareUrl(data) {
+      var url = new URL(window.location.href)
+      url.searchParams.set(COLOR_PARAM, encodeChartData(data))
+      return url.toString()
+    }
+
+    function getInitialData() {
+      var params = new URLSearchParams(window.location.search)
+      var payload = params.get(COLOR_PARAM)
+      if (!payload) {
+        return DEFAULT_DATA
+      }
+
+      try {
+        return decodeChartData(payload)
+      } catch (error) {
+        console.warn("Failed to decode chart payload, falling back to default data.", error)
+        return DEFAULT_DATA
+      }
+    }
+
+    function stableChartSnapshot(chart) {
+      return compactChartData({
+        shape: chart.data.shape,
+        lanes: chart.data.lanes,
+        lanesConfig: chart.data.lanesConfig,
+        elements: chart.data.elements,
+        colorTags: chart.data.colorTags
+      })
+    }
+
+    function instrumentSharing(chart, syncUrl) {
+      var methods = [
+        "setElements",
+        "updateElement",
+        "updateManyElements",
+        "deleteElement",
+        "deleteLane",
+        "addLane",
+        "toggleLockLane",
+        "createElement",
+        "changeColor",
+        "colorTag",
+        "update",
+        "changeShape",
+        "initAndAddElements"
+      ]
+
+      methods.forEach(function (methodName) {
+        var original = chart[methodName]
+        if (typeof original !== "function") {
+          return
+        }
+        chart[methodName] = function () {
+          var result = original.apply(chart, arguments)
+          syncUrl()
+          return result
+        }
+      })
+    }
+
+    var swatches = document.querySelectorAll(".swatch")
+    var copyShareUrlButton = document.getElementById("copyShareUrl")
+    var clearChartButton = document.getElementById("clearChart")
+    var resetChartButton = document.getElementById("resetChart")
+    var currentDrawColor = "#3b82f6"
+    var ctx = document.getElementById("myNapchart").getContext('2d')
+    var myNapchart = Napchart.init(ctx, getInitialData(), {
+      interaction: true,
+      penMode: true,
+      background: "#ffffff",
+      fontColor: "#000000",
+      defaultColor: currentDrawColor
+    })
+
+    function syncShareUrl() {
+      var shareUrl = buildShareUrl(stableChartSnapshot(myNapchart))
+      window.history.replaceState({}, "", shareUrl)
+      return shareUrl
+    }
+
+    instrumentSharing(myNapchart, syncShareUrl)
+    myNapchart.onUpdate = syncShareUrl
+
+    function setDrawColor(color) {
+      currentDrawColor = color
+      myNapchart.config.defaultColor = color
+      myNapchart.unScaledConfig.defaultColor = color
+      syncShareUrl()
+    }
+
+    swatches.forEach(function (button) {
+      button.addEventListener("click", function () {
+        swatches.forEach(function (other) {
+          other.classList.remove("active")
+        })
+        button.classList.add("active")
+
+        var color = button.dataset.color
+        if (myNapchart.selectedElement) {
+          myNapchart.changeColor(myNapchart.selectedElement, color)
+        }
+        setDrawColor(color)
+      })
+    })
+
+    copyShareUrlButton.addEventListener("click", async function () {
+      var shareUrl = syncShareUrl()
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(shareUrl)
+      } else {
+        var fallbackInput = document.createElement("input")
+        fallbackInput.value = shareUrl
+        document.body.appendChild(fallbackInput)
+        fallbackInput.select()
+        fallbackInput.setSelectionRange(0, shareUrl.length)
+        document.execCommand("copy")
+        document.body.removeChild(fallbackInput)
+      }
+      var originalText = copyShareUrlButton.textContent
+      copyShareUrlButton.textContent = "Copied"
+      window.setTimeout(function () {
+        copyShareUrlButton.textContent = originalText
+      }, 1200)
+    })
+
+    clearChartButton.addEventListener("click", function () {
+      myNapchart.setElements([])
+      myNapchart.data.colorTags = []
+      myNapchart.deselect()
+      syncShareUrl()
+    })
+
+    resetChartButton.addEventListener("click", function () {
+      var resetData = compactChartData(DEFAULT_DATA)
+      myNapchart.data.shape = resetData.shape
+      myNapchart.data.lanes = resetData.lanes
+      myNapchart.data.lanesConfig = resetData.lanesConfig
+      myNapchart.data.colorTags = resetData.colorTags
+      myNapchart.setElements(resetData.elements)
+      myNapchart.deselect()
+      syncShareUrl()
+    })
+
+    swatches[0].classList.add("active")
+    setDrawColor(currentDrawColor)
+    syncShareUrl()
+  </script>
+</body>
+</html>
