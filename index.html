@@ -6,47 +6,99 @@
   <title>Polychart</title>
   <style>
     body {
+      background-color: #f0f0f2;
       margin: 0;
-      padding: 20px;
+      padding: 2em;
+      font-family: -apple-system, system-ui, BlinkMacSystemFont, "Segoe UI", "Open Sans", "Helvetica Neue", Helvetica, Arial, sans-serif;
+      color: #333;
       display: flex;
       flex-direction: column;
-      align-items: center;
-      font-family: sans-serif;
-      gap: 16px;
+      height: 100vh;
+      box-sizing: border-box;
+      overflow: hidden;
     }
+
+    h1 {
+      margin: 0 0 0.5em 0;
+      font-size: 2em;
+      font-weight: 400;
+    }
+
+    .description {
+      margin: 0 0 1.5em 0;
+      line-height: 1.5;
+      max-width: 600px;
+      color: #333;
+    }
+
     .swatches {
       display: flex;
       gap: 8px;
+      margin-bottom: 1.5em;
     }
+
     .swatch {
-      width: 24px;
-      height: 24px;
-      border: 1px solid rgba(0, 0, 0, 0.2);
+      width: 20px;
+      height: 20px;
+      border: none;
       cursor: pointer;
       padding: 0;
     }
+
     .swatch.active {
-      outline: 2px solid #111;
-      outline-offset: 1px;
+      box-shadow: 0 0 0 2px #38488f;
     }
-    .share-button {
-      padding: 8px 12px;
-      cursor: pointer;
-    }
+
     .actions {
       display: flex;
-      gap: 8px;
+      gap: 1.5em;
+      margin-bottom: 2em;
     }
+
+    .share-button {
+      background: none;
+      border: none;
+      padding: 0;
+      color: #38488f;
+      text-decoration: none;
+      font-size: 1em;
+      cursor: pointer;
+      font-family: inherit;
+      transition: color 0.2s ease;
+    }
+
+    .share-button.success {
+      color: #10b981 !important;
+    }
+
+    .share-button:hover {
+      text-decoration: underline;
+    }
+
     .chart-container {
-      width: 80vw;
-      height: 60vh;
-      border: 2px solid #ccc;
-      resize: both;
-      overflow: hidden;
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+      background: transparent;
+    }
+
+    @media (max-width: 600px) {
+      body {
+        padding: 1em;
+      }
+      h1 {
+        font-size: 1.5em;
+      }
     }
   </style>
 </head>
 <body>
+  <h1>Polychart</h1>
+  <p class="description">
+    Create and share your polyphasic sleep schedules. 
+    Click swatches to change colors, and drag on the chart to create elements.
+  </p>
+
   <div class="swatches">
     <button class="swatch" data-color="#3b82f6" style="background:#3b82f6"></button>
     <button class="swatch" data-color="#ef4444" style="background:#ef4444"></button>
@@ -56,11 +108,13 @@
     <button class="swatch" data-color="#111827" style="background:#111827"></button>
     <button class="swatch" data-color="#ec4899" style="background:#ec4899"></button>
   </div>
+
   <div class="actions">
     <button id="copyShareUrl" class="share-button">Copy share URL</button>
-    <button id="clearChart" class="share-button">Clear</button>
+    <button id="clearChart" class="share-button">Clear chart</button>
     <button id="resetChart" class="share-button">Reset</button>
   </div>
+
   <div class="chart-container">
     <canvas id="myNapchart"></canvas>
   </div>
@@ -479,8 +533,7 @@
 
       try {
         return decodeChartData(payload)
-      } catch (error) {
-        console.warn("Failed to decode chart payload, falling back to default data.", error)
+      } catch {
         return DEFAULT_DATA
       }
     }
@@ -583,11 +636,10 @@
         document.execCommand("copy")
         document.body.removeChild(fallbackInput)
       }
-      var originalText = copyShareUrlButton.textContent
-      copyShareUrlButton.textContent = "Copied"
+      copyShareUrlButton.classList.add("success")
       window.setTimeout(function () {
-        copyShareUrlButton.textContent = originalText
-      }, 1200)
+        copyShareUrlButton.classList.remove("success")
+      }, 1000)
     })
 
     clearChartButton.addEventListener("click", function () {
