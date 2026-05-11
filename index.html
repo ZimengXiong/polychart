@@ -19,35 +19,43 @@
     }
 
     #main-wrapper {
-      width: 85%;
-      max-width: 900px;
-      margin: 4em 0;
+      width: 90%;
+      max-width: 800px;
+      margin: 1.5em auto;
       display: flex;
       flex-direction: column;
-      height: calc(100vh - 8em);
+      height: calc(100vh - 3em);
+      box-sizing: border-box;
+    }
+
+    .header-layout {
+      margin-bottom: 0.5em;
     }
 
     h1 {
-      margin: 0 0 0.5em 0;
-      font-size: 2em;
-      font-weight: 400;
-    }
-
-    .description {
-      margin: 0 0 1.5em 0;
-      line-height: 1.5;
+      margin: 0;
+      font-size: 1.6em;
+      font-weight: 500;
       color: #333;
     }
 
+    .description {
+      margin: 0 0 1em 0;
+      font-size: 0.9em;
+      line-height: 1.4;
+      color: #333;
+      max-width: 600px;
+    }
+
     .preset-controls {
-      margin-bottom: 2em;
+      margin-bottom: 1.2em;
     }
 
     .preset-label {
       display: block;
-      margin-bottom: 0.4em;
+      margin-bottom: 0.2em;
       color: #666;
-      font-size: 0.9em;
+      font-size: 0.85em;
     }
 
     .preset-toolbar {
@@ -69,7 +77,7 @@
       background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 10 10"><path fill="%2338488f" d="M0 3l5 5 5-5z"/></svg>');
       background-repeat: no-repeat;
       background-position: right 2px center;
-      font-size: 1.1em;
+      font-size: 1em;
     }
 
     .preset-select:hover {
@@ -81,35 +89,59 @@
     }
 
     .preset-summary {
-      margin: 0.6em 0 0 0;
+      margin: 0.4em 0 0 0;
       max-width: 600px;
       color: #666;
-      font-size: 0.9em;
-      line-height: 1.5;
+      font-size: 0.85em;
+      line-height: 1.4;
     }
 
     .swatches {
       display: flex;
       gap: 8px;
-      margin-bottom: 1.5em;
+      margin-bottom: 1em;
     }
 
     .swatch {
-      width: 20px;
-      height: 20px;
+      width: 18px;
+      height: 18px;
       border: none;
       cursor: pointer;
       padding: 0;
     }
 
     .swatch.active {
-      box-shadow: 0 0 0 2px #38488f;
+      box-shadow: inset 0 0 0 2px black;
     }
 
     .actions {
       display: flex;
-      gap: 1.5em;
-      margin-bottom: 2em;
+      flex-wrap: wrap; /* Allow wrapping for more buttons */
+      gap: 1.2em;
+      margin-bottom: 1.2em;
+    }
+
+    /* Hide UI when in raw mode */
+    body.raw-mode #main-wrapper > *:not(.chart-container) {
+      display: none;
+    }
+
+    body.raw-mode #main-wrapper {
+      width: 100%;
+      max-width: none;
+      margin: 0;
+      padding: 0;
+      height: 100vh;
+    }
+
+    body.raw-mode .chart-container {
+      box-shadow: none;
+      background: white;
+      padding: 0;
+    }
+
+    body.raw-mode #chartName {
+      display: none;
     }
 
     .share-button {
@@ -118,7 +150,7 @@
       padding: 0;
       color: #38488f;
       text-decoration: none;
-      font-size: 1em;
+      font-size: 0.9em;
       cursor: pointer;
       font-family: inherit;
       transition: color 0.2s ease;
@@ -133,36 +165,53 @@
     }
 
     .chart-container {
+      background-color: #fdfdff;
+      border-radius: 0; /* Removed rounded corners */
+      box-shadow: 2px 3px 7px 2px rgba(0,0,0,0.02);
+      padding: 1.5em;
+      display: flex;
+      flex-direction: column;
+      gap: 1em;
+      flex: 1;
+      min-height: 0;
+    }
+
+    #chartName {
+      font-size: 1.4em;
+      color: #38488f;
+      cursor: text;
+      padding: 2px 0;
+      border: none;
+      background: transparent;
+      outline: none;
+      width: fit-content;
+    }
+
+    #myNapchart {
       flex: 1;
       width: 100%;
       min-height: 0;
-      background: transparent;
     }
 
     @media (max-width: 600px) {
       #main-wrapper {
-        width: 90%;
-        margin: 2em 0;
-        height: calc(100vh - 4em);
+        margin: 1em auto;
+        height: calc(100vh - 2em);
+      }
+      .chart-container {
+        padding: 1em;
       }
       h1 {
-        font-size: 1.5em;
+        font-size: 1.4em;
       }
-
-      .preset-toolbar {
-        align-items: stretch;
-      }
-
-      .preset-select {
-        flex-basis: 100%;
-      }
-
     }
   </style>
 </head>
 <body>
   <div id="main-wrapper">
-    <h1>Polychart</h1>
+    <div class="header-layout">
+      <h1>Polychart</h1>
+    </div>
     <p class="description">
       Create and share your polyphasic sleep schedules. 
       Click swatches to change colors, drag on the chart to create elements, or load a preset schedule below.
@@ -192,15 +241,19 @@
 
     <div class="actions">
       <button id="copyShareUrl" class="share-button">Copy share URL</button>
+      <button id="copyPng" class="share-button">Copy PNG</button>
+      <button id="copyPngLink" class="share-button">Copy PNG link</button>
+      <button id="savePng" class="share-button">Save PNG</button>
       <button id="clearChart" class="share-button">Clear chart</button>
       <button id="resetChart" class="share-button">Reset</button>
     </div>
 
     <div class="chart-container">
+      <div id="chartName" contenteditable="true">Untitled Chart</div>
       <canvas id="myNapchart"></canvas>
     </div>
   </div>
-  <script src="./polychart.js"></script>
+  <script src="/polychart.js"></script>
   <script>
     var COLOR_PARAM = "chart"
     var CODEC_VERSION = 1
@@ -925,6 +978,7 @@
 
     function compactChartData(data) {
       var sanitized = {
+        name: (data.name || "").trim(),
         shape: SHAPE_TO_CODE.hasOwnProperty(data.shape) ? data.shape : "circle",
         lanes: Math.max(1, Math.min(8, data.lanes || 1)),
         lanesConfig: cloneLanesConfig(data.lanesConfig),
@@ -957,6 +1011,7 @@
 
     function cloneChartData(data) {
       return compactChartData({
+        name: data && data.name,
         shape: data && data.shape,
         lanes: data && data.lanes,
         lanesConfig: cloneLanesConfig(data && data.lanesConfig),
@@ -1540,6 +1595,11 @@
         })
       }
 
+      // Append chart name
+      var nameBytes = encodeUtf8(data.name || "")
+      writer.writeVarUint(nameBytes.length)
+      writer.writeBytes(nameBytes)
+
       return writer.toUint8Array()
     }
 
@@ -1631,7 +1691,16 @@
         }
       }
 
+      var name = ""
+      try {
+        var nameLength = reader.readVarUint()
+        name = decodeUtf8(reader.readBytes(nameLength))
+      } catch (e) {
+        // Fallback for older URLs
+      }
+
       return compactChartData({
+        name: name,
         shape: shape,
         lanes: lanes,
         lanesConfig: lanesConfig,
@@ -1825,6 +1894,11 @@
         }
       })
 
+      // Append chart name
+      var nameBytes = encodeUtf8(chartData.name)
+      writer.writeVarUint(nameBytes.length)
+      writer.writeBytes(nameBytes)
+
       return base64UrlEncode(writer.toUint8Array())
     }
 
@@ -1884,7 +1958,16 @@
         }
       }
 
+      var name = ""
+      try {
+        var nameLength = reader.readVarUint()
+        name = decodeUtf8(reader.readBytes(nameLength))
+      } catch (e) {
+        // Fallback for older URLs without a name
+      }
+
       return compactChartData({
+        name: name,
         shape: shape,
         lanes: lanes,
         lanesConfig: lanesConfig,
@@ -1895,6 +1978,7 @@
 
     function stableChartSnapshot(chart) {
       return compactChartData({
+        name: document.getElementById("chartName").textContent,
         shape: chart.data.shape,
         lanes: chart.data.lanes,
         lanesConfig: chart.data.lanesConfig,
@@ -1965,6 +2049,9 @@
     var presetSelect = document.getElementById("presetSelect")
     var presetSummary = document.getElementById("presetSummary")
     var copyShareUrlButton = document.getElementById("copyShareUrl")
+    var copyPngButton = document.getElementById("copyPng")
+    var copyPngLinkButton = document.getElementById("copyPngLink")
+    var savePngButton = document.getElementById("savePng")
     var clearChartButton = document.getElementById("clearChart")
     var resetChartButton = document.getElementById("resetChart")
     var currentDrawColor = DEFAULT_DRAW_COLOR
@@ -1972,6 +2059,16 @@
     var myNapchart = null
     var latestShareUrl = window.location.href
     var shareSyncToken = 0
+
+    function getRawSlug() {
+      var path = window.location.pathname
+      var match = path.match(/^\/raw\/(.+)$/)
+      return match ? match[1] : null
+    }
+
+    function isRawMode() {
+      return !!getRawSlug()
+    }
 
     function populatePresetSelect() {
       PRESET_CATEGORIES.forEach(function (category) {
@@ -2001,6 +2098,9 @@
         presetSummary.textContent = "Presets follow Polyphasic Sleep Wiki default variants where those are defined. Flexible schedules use a representative example variant."
         return
       }
+
+      // Update chart name to match preset
+      document.getElementById("chartName").textContent = preset.label
 
       presetSummary.textContent = (preset.variant === "default" ? "Default variant" : "Example variant") +
         " · " + formatDuration(preset.totalSleep) +
@@ -2032,7 +2132,7 @@
     }
 
     function requestShareUrlSync() {
-      if (!myNapchart) {
+      if (!myNapchart || isRawMode()) {
         return Promise.resolve(latestShareUrl)
       }
 
@@ -2063,6 +2163,13 @@
 
     presetSelect.addEventListener("change", handlePresetChange)
 
+    function flashButton(button) {
+      button.classList.add("success")
+      window.setTimeout(function () {
+        button.classList.remove("success")
+      }, 1000)
+    }
+
     copyShareUrlButton.addEventListener("click", async function () {
       var shareUrl = await requestShareUrlSync()
       if (navigator.clipboard && navigator.clipboard.writeText) {
@@ -2076,10 +2183,69 @@
         document.execCommand("copy")
         document.body.removeChild(fallbackInput)
       }
-      copyShareUrlButton.classList.add("success")
-      window.setTimeout(function () {
-        copyShareUrlButton.classList.remove("success")
-      }, 1000)
+      flashButton(copyShareUrlButton)
+    })
+
+    async function getExportCanvas() {
+      var originalCanvas = document.getElementById("myNapchart")
+      var rawName = document.getElementById("chartName").textContent || ""
+      var name = rawName.trim()
+      var isUntitled = name === "Untitled Chart" || name === ""
+      
+      var tempCanvas = document.createElement("canvas")
+      var ctx = tempCanvas.getContext("2d")
+      
+      var padding = 60
+      var fontSize = 48
+      var gap = isUntitled ? 0 : 24
+      var titleAreaHeight = isUntitled ? 0 : fontSize
+      
+      tempCanvas.width = originalCanvas.width + (padding * 2)
+      tempCanvas.height = originalCanvas.height + (padding * 2) + titleAreaHeight + gap
+      
+      // Background
+      ctx.fillStyle = "#fdfdff"
+      ctx.fillRect(0, 0, tempCanvas.width, tempCanvas.height)
+      
+      if (!isUntitled) {
+        // Title
+        ctx.fillStyle = "#38488f"
+        ctx.font = "500 " + fontSize + "px -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
+        ctx.fillText(name, padding, padding + fontSize)
+      }
+      
+      // Draw original chart
+      ctx.drawImage(originalCanvas, padding, padding + titleAreaHeight + gap)
+      
+      return tempCanvas
+    }
+
+    copyPngButton.addEventListener("click", async function () {
+      var canvas = await getExportCanvas()
+      canvas.toBlob(function (blob) {
+        var item = new ClipboardItem({ "image/png": blob })
+        navigator.clipboard.write([item]).then(function() {
+          flashButton(copyPngButton)
+        })
+      })
+    })
+
+    copyPngLinkButton.addEventListener("click", async function () {
+      var shareUrl = await requestShareUrlSync()
+      var url = new URL(shareUrl)
+      var slug = url.hash.slice(1)
+      var rawUrl = window.location.origin + "/raw/" + slug
+      await navigator.clipboard.writeText(rawUrl)
+      flashButton(copyPngLinkButton)
+    })
+
+    savePngButton.addEventListener("click", async function () {
+      var canvas = await getExportCanvas()
+      var link = document.createElement("a")
+      link.download = (document.getElementById("chartName").textContent || "chart").trim() + ".png"
+      link.href = canvas.toDataURL("image/png")
+      link.click()
+      flashButton(savePngButton)
     })
 
     clearChartButton.addEventListener("click", function () {
@@ -2098,23 +2264,57 @@
     })
 
     async function boot() {
-      var initialState = await getInitialData()
+      var slug = getRawSlug()
+      var initialState = null
+      
+      if (slug) {
+        document.body.classList.add("raw-mode")
+        try {
+          var fragment = parseShareFragment(slug)
+          var data = fragment.version === 1
+            ? decodeChartData(fragment.payload)
+            : decodeChartDataV4Bytes(
+              fragment.compressed
+                ? await decompressBytes(base64UrlDecode(fragment.payload))
+                : base64UrlDecode(fragment.payload)
+            )
+          initialState = { data: data, rewriteUrl: false }
+        } catch (e) {
+          console.error("Failed to decode raw slug", e)
+        }
+      }
+
+      if (!initialState) {
+        initialState = await getInitialData()
+      }
+
+      // Set name from loaded data if it exists
+      if (initialState.data && initialState.data.name) {
+        document.getElementById("chartName").textContent = initialState.data.name
+      }
 
       myNapchart = Napchart.init(ctx, initialState.data, {
-        interaction: true,
-        penMode: true,
+        interaction: !slug,
+        penMode: !slug,
         background: "#ffffff",
         fontColor: "#000000",
         defaultColor: currentDrawColor
       })
 
-      instrumentSharing(myNapchart, requestShareUrlSync)
-      myNapchart.onUpdate = requestShareUrlSync
+      if (!slug) {
+        instrumentSharing(myNapchart, requestShareUrlSync)
+        myNapchart.onUpdate = requestShareUrlSync
 
-      populatePresetSelect()
-      handlePresetChange()
-      setDrawColor(currentDrawColor)
-      await requestShareUrlSync()
+        // Live update URL when typing the name
+        document.getElementById("chartName").addEventListener("input", function() {
+          requestShareUrlSync()
+        })
+
+        populatePresetSelect()
+        handlePresetChange()
+        setDrawColor(currentDrawColor)
+        await requestShareUrlSync()
+      }
     }
 
     boot().catch(function (error) {

@@ -1,0 +1,11 @@
+{
+  "name": "polychart",
+  "version": "1.0.0",
+  "dependencies": {
+    "canvas": "^2.11.2"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1",
+    "esbuild": "^0.28.0"
+  }
+}
