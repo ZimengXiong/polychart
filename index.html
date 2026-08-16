@@ -2155,6 +2155,104 @@
       requestShareUrlSync()
     }
 
+    function enableChartEditing(chart) {
+      var canvas = chart.canvas
+      var editing = null
+
+      // The bundled renderer checks this method while drawing selection handles,
+      // but does not provide it on the chart instance.
+      chart.isHover = function (elementId, type) {
+        return this.hoverElement.id === elementId && this.hoverElement.type === type
+      }
+
+      function getPointerInfo(event) {
+        var bounds = canvas.getBoundingClientRect()
+        var ratio = window.devicePixelRatio || 1
+        return chart.helpers.XYtoInfo(
+          chart,
+          (event.clientX - bounds.left) * ratio,
+          (event.clientY - bounds.top) * ratio
+        )
+      }
+
+      function snappedMinutes(minutes) {
+        return chart.helpers.limit(Math.round(minutes / 5) * 5)
+      }
+
+      function endpointMode(element, event) {
+        var lane = chart.shape.lanes[element.lane]
+        if (!lane) return "move"
+        var radius = lane.end - chart.config.paddingLanes
+        var start = chart.helpers.minutesToXY(chart, element.start, radius)
+        var end = chart.helpers.minutesToXY(chart, element.end, radius)
+        var bounds = canvas.getBoundingClientRect()
+        var ratio = window.devicePixelRatio || 1
+        var x = (event.clientX - bounds.left) * ratio
+        var y = (event.clientY - bounds.top) * ratio
+        var handleDistance = chart.config.handlesClickDistance * 1.5
+        if (chart.helpers.distance(x, y, start.x, start.y) <= handleDistance) return "start"
+        if (chart.helpers.distance(x, y, end.x, end.y) <= handleDistance) return "end"
+        return "move"
+      }
+
+      canvas.addEventListener("mousedown", function (event) {
+        if (event.button !== 0) return
+        var info = getPointerInfo(event)
+        if (info.lane === -1) return
+
+        var minute = snappedMinutes(info.minutes)
+        var element = chart.data.elements.find(function (item) {
+          return item.lane === info.lane && chart.helpers.isInside(minute, item.start, item.end)
+        })
+
+        if (element) {
+          editing = {
+            element: element,
+            mode: endpointMode(element, event),
+            anchor: minute,
+            start: element.start,
+            end: element.end
+          }
+          return
+        }
+
+        element = chart.createElement({
+          start: minute,
+          end: chart.helpers.limit(minute + 5),
+          lane: info.lane,
+          color: currentDrawColor
+        })
+        chart.setSelected(element.id)
+        editing = { element: element, mode: "end", start: minute }
+      })
+
+      window.addEventListener("mousemove", function (event) {
+        if (!editing) return
+        var info = getPointerInfo(event)
+        var minute = snappedMinutes(info.minutes)
+        var element = editing.element
+
+        if (editing.mode === "start") {
+          element.start = minute === element.end ? chart.helpers.limit(minute - 5) : minute
+        } else if (editing.mode === "end") {
+          element.end = minute === element.start ? chart.helpers.limit(minute + 5) : minute
+        } else {
+          var delta = minute - editing.anchor
+          if (delta > 720) delta -= 1440
+          if (delta < -720) delta += 1440
+          element.start = chart.helpers.limit(editing.start + delta)
+          element.end = chart.helpers.limit(editing.end + delta)
+        }
+        chart.draw()
+      })
+
+      window.addEventListener("mouseup", function () {
+        if (!editing) return
+        editing = null
+        chart.onUpdate()
+      })
+    }
+
     swatches.forEach(function (button) {
       button.addEventListener("click", function () {
         setDrawColor(button.dataset.color)
@@ -2300,6 +2398,10 @@
         fontColor: "#000000",
         defaultColor: currentDrawColor
       })
+
+      if (!slug) {
+        enableChartEditing(myNapchart)
+      }
 
       if (!slug) {
         instrumentSharing(myNapchart, requestShareUrlSync)
